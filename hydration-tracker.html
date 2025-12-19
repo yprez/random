@@ -1,0 +1,2818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hydration Tracker</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #0a0e27 0%, #0f1419 50%, #0d1b2a 100%);
+      color: #e8edf4;
+      --water-primary: #06b6d4;
+      --water-light: #22d3ee;
+      --water-glow: rgba(6, 182, 212, 0.4);
+      --glass-bg: rgba(20, 25, 35, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --shadow-elevation: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: float 20s ease-in-out infinite;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -30%;
+      left: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: float 25s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.9); }
+    }
+
+    header {
+      padding: 2rem 1.5rem;
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(15, 20, 30, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    header h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--water-light) 0%, var(--water-primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header h1::before {
+      content: '💧';
+      -webkit-text-fill-color: initial;
+      font-size: 1.75rem;
+      filter: drop-shadow(0 0 8px var(--water-glow));
+    }
+
+    #progress-summary {
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+      color: #b8c5d6;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    #day-selector {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    #day-selector button {
+      padding: 0.45rem 0.85rem;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(17, 24, 39, 0.7);
+      color: #d1dae3;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    #day-selector button:hover:not([disabled]) {
+      background: rgba(30, 41, 59, 0.9);
+      transform: translateY(-1px);
+    }
+
+    #day-selector button[disabled] {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    #current-day-label {
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: #f1f5f9;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+      min-width: 180px;
+      text-align: center;
+    }
+
+    #quick-add {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    #quick-add .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    #quick-add button {
+      flex: 0 1 110px;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: inherit;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 0.95rem;
+      font-weight: 500;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    #quick-add button::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--water-light), var(--water-primary));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    #quick-add button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.4);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    #quick-add button:hover {
+      background: rgba(30, 40, 55, 0.8);
+      border-color: rgba(6, 182, 212, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
+    }
+
+    #quick-add button:active::after {
+      width: 300px;
+      height: 300px;
+      transition: width 0s, height 0s;
+    }
+
+    #quick-add button:focus {
+      outline: 2px solid var(--water-primary);
+      outline-offset: 2px;
+    }
+
+    .quick-button-pinned {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    .quick-button-pinned:hover {
+      border-color: rgba(251, 191, 36, 0.5);
+      box-shadow: 0 4px 16px rgba(251, 191, 36, 0.25);
+    }
+
+    .quick-button-recent {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(34, 211, 238, 0.12));
+      border-color: rgba(6, 182, 212, 0.25);
+    }
+
+    .quick-button-recent:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
+    }
+
+    main {
+      flex: 1;
+      padding: 1.5rem;
+      display: grid;
+      gap: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    section {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 1.5rem;
+      min-height: 150px;
+      box-shadow: var(--shadow-elevation);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--water-light), var(--water-primary));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    section:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    section:hover::before {
+      opacity: 1;
+    }
+
+    section h2 {
+      margin-top: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--water-light);
+      letter-spacing: -0.01em;
+    }
+
+    footer {
+      padding: 1.25rem 1.5rem;
+      border-top: 1px solid var(--glass-border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      background: rgba(10, 14, 25, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: relative;
+      z-index: 10;
+    }
+
+    footer button {
+      padding: 0.7rem 1.25rem;
+      border-radius: 999px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #d1dae3;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    footer button:hover {
+      background: rgba(30, 40, 55, 0.8);
+      border-color: rgba(6, 182, 212, 0.4);
+      color: var(--water-light);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    }
+
+    dialog {
+      border: none;
+      border-radius: 24px;
+      padding: 2.5rem;
+      background: linear-gradient(135deg, rgba(20, 28, 42, 0.98), rgba(15, 20, 30, 0.98));
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid var(--glass-border);
+      color: inherit;
+      width: 90vw;
+      max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      display: none;
+    }
+
+    dialog[open] {
+      display: block;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    #settings-modal {
+      max-width: 520px;
+      width: 92vw;
+      gap: 1.25rem;
+    }
+
+    #settings-modal[open] {
+      display: grid;
+    }
+
+    #settings-modal h2 {
+      margin-top: 0;
+      color: var(--water-light);
+      font-size: 1.5rem;
+    }
+
+    #settings-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    #settings-form .field-group {
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    #settings-form small {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    #settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    #settings-actions button {
+      padding: 0.75rem 1.4rem;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: rgba(18, 24, 38, 0.9);
+      color: var(--water-light);
+      cursor: pointer;
+      font-weight: 500;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    #settings-actions button[type="submit"] {
+      background: linear-gradient(135deg, var(--water-primary), var(--water-light));
+      color: #03111c;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+    }
+
+    #settings-actions button:hover {
+      transform: translateY(-1px);
+    }
+
+    dialog h2 {
+      color: var(--water-light);
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    dialog p {
+      color: #b8c5d6;
+      margin-bottom: 1.5rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #b8c5d6;
+    }
+
+    input[type="number"],
+    input[type="datetime-local"] {
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: rgba(15, 20, 30, 0.6);
+      color: inherit;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    input[type="number"]:focus,
+    input[type="datetime-local"]:focus {
+      outline: none;
+      border-color: var(--water-primary);
+      box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+      background: rgba(15, 20, 30, 0.8);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .modal-actions button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: linear-gradient(135deg, var(--water-primary), var(--water-light));
+      color: #0a0e27;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+    }
+
+    .modal-actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+    }
+
+    #custom-amount-panel {
+      margin-top: 0.75rem;
+      padding: 1.25rem;
+      border-radius: 16px;
+      border: 1px dashed rgba(6, 182, 212, 0.3);
+      background: rgba(6, 182, 212, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #custom-amount-panel[hidden] {
+      display: none;
+    }
+
+    .custom-input-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+
+    .custom-input-row input[type="number"] {
+      flex: 1;
+    }
+
+    .custom-input-row button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: linear-gradient(135deg, var(--water-primary), var(--water-light));
+      color: #0a0e27;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .custom-input-row button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+    }
+
+    .custom-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .custom-actions button {
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(30, 40, 55, 0.6);
+      color: #b8c5d6;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .custom-actions button:hover {
+      background: rgba(30, 40, 55, 0.9);
+      color: var(--water-light);
+    }
+
+    #log-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .log-empty {
+      color: #7a7d82;
+      font-size: 0.95rem;
+    }
+
+    .log-item {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 0.9rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      background: rgba(15, 20, 30, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+      will-change: transform, opacity, box-shadow;
+    }
+
+    .log-item--enter {
+      animation: logItemEnter 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes logItemEnter {
+      0% {
+        opacity: 0;
+        transform: translateY(16px) scale(0.96);
+        box-shadow: 0 20px 32px rgba(6, 182, 212, 0.12);
+      }
+      55% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 14px 28px rgba(6, 182, 212, 0.2);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      }
+    }
+
+    .log-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .log-amount {
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--water-light);
+    }
+
+    .log-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+      color: #a4a7ac;
+      flex-wrap: wrap;
+    }
+
+    .log-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    .log-actions button {
+      padding: 0.45rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(20, 26, 40, 0.8);
+      color: inherit;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .log-actions button:hover {
+      background: rgba(32, 40, 60, 0.95);
+      transform: translateY(-1px);
+    }
+
+    .log-source {
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.1);
+      color: #7cd5ff;
+    }
+
+    .log-editing {
+      border-color: rgba(37, 99, 235, 0.5);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .log-deleting {
+      pointer-events: none;
+      animation: logItemExit 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes logItemExit {
+      0% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      }
+      40% {
+        opacity: 1;
+        transform: translateX(6px) scale(0.99);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(24px) scale(0.9);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .log-item {
+        transition: none;
+      }
+
+      .log-item--enter {
+        animation: none;
+      }
+
+      .log-deleting {
+        animation: none;
+      }
+    }
+
+
+    .log-edit-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: flex-end;
+    }
+
+    .log-edit-form input[type="number"],
+    .log-edit-form input[type="datetime-local"] {
+      flex: 1 1 160px;
+      min-width: 140px;
+    }
+
+    .mini-button {
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(24, 30, 40, 0.85);
+      color: inherit;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s ease;
+    }
+
+    .mini-button:hover {
+      background: rgba(32, 40, 52, 0.95);
+    }
+
+    #history-chart {
+      position: relative;
+      height: 240px;
+      padding: 1rem;
+      border-radius: 16px;
+      background: rgba(10, 14, 25, 0.5);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #history-chart svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-grid line {
+      stroke: rgba(255, 255, 255, 0.06);
+      stroke-width: 1;
+    }
+
+    .chart-axis text {
+      fill: #94a3b8;
+      font-size: 10px;
+    }
+
+    .chart-bar {
+      fill: url(#barGradient);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .chart-bar:hover {
+      opacity: 0.85;
+    }
+
+    .chart-bar--active {
+      opacity: 0.95;
+      transform: translateY(-2px);
+    }
+
+    .goal-line {
+      stroke: rgba(255, 255, 255, 0.35);
+      stroke-width: 1.5;
+      stroke-dasharray: 6 4;
+    }
+
+    #chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      padding: 0.4rem 0.7rem;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.92);
+      color: #f8fafc;
+      font-size: 0.85rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+      transform: translate(-50%, -120%);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 5;
+      white-space: nowrap;
+    }
+
+    #chart-tooltip.visible {
+      opacity: 1;
+    }
+
+    .chart-empty {
+      color: #7a7d82;
+      font-style: italic;
+      font-size: 0.95rem;
+    }
+
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      pointer-events: none;
+    }
+
+    #delete-toast {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.9rem 1.2rem;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #e2e8f0;
+      box-shadow: 0 12px 32px rgba(2, 12, 27, 0.45);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    #delete-toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #delete-toast button {
+      padding: 0.45rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.15);
+      color: #7cd5ff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    #delete-toast button:hover {
+      background: rgba(56, 189, 248, 0.25);
+      transform: translateY(-1px);
+    }
+
+    #time-control {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    #time-control .field {
+      flex: 1 1 220px;
+      margin-bottom: 0;
+    }
+
+    #time-summary {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      color: #b8c5d6;
+    }
+
+    #time-summary button {
+      padding: 0.5rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(30, 40, 55, 0.6);
+      color: inherit;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #time-summary button:hover {
+      background: rgba(30, 40, 55, 0.9);
+      border-color: var(--water-primary);
+    }
+
+    #time-summary.time-custom {
+      color: #fbbf24;
+    }
+
+    #time-summary.time-custom button {
+      border-color: rgba(251, 191, 36, 0.4);
+      background: rgba(251, 191, 36, 0.1);
+    }
+
+    .quick-button-custom {
+      border-style: dashed;
+      background: rgba(6, 182, 212, 0.08);
+    }
+
+    .quick-button-custom:hover {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--water-primary);
+    }
+
+    .row-placeholder {
+      font-size: 0.9rem;
+      color: #6a7585;
+      padding: 0.5rem;
+      font-style: italic;
+    }
+
+    #custom-amount-trigger {
+      padding: 0.75rem 1.25rem;
+      border-radius: 999px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: var(--water-light);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    #custom-amount-trigger:hover {
+      background: rgba(30, 40, 55, 0.8);
+      border-color: rgba(6, 182, 212, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
+    }
+
+    .quick-button-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @keyframes progressFill {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    #progress-indicator {
+      background: linear-gradient(90deg, rgba(6, 40, 61, 0.4), rgba(10, 14, 39, 0.4));
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    [data-role="progress-fill"] {
+      animation: progressFill 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: left;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
+    }
+
+    @media (max-width: 768px) {
+      body::before,
+      body::after {
+        width: 400px;
+        height: 400px;
+      }
+
+      header {
+        padding: 1.5rem 1rem;
+      }
+
+      header h1 {
+        font-size: 1.5rem;
+      }
+
+      header h1::before {
+        font-size: 1.5rem;
+      }
+
+      #progress-summary {
+        font-size: 1.1rem;
+      }
+
+      main {
+        padding: 1rem;
+        gap: 1rem;
+      }
+
+      section {
+        padding: 1.25rem 1rem;
+        border-radius: 16px;
+      }
+
+      section h2 {
+        font-size: 1.2rem;
+      }
+
+      #quick-add {
+        gap: 0.6rem;
+      }
+
+      #quick-add button {
+        flex: 0 1 calc(50% - 0.25rem);
+        min-width: 100px;
+        padding: 0.8rem 1rem;
+        font-size: 0.9rem;
+      }
+
+      #time-control {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+      }
+
+      #time-control .field {
+        flex: 1 1 auto;
+      }
+
+      #time-summary {
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: rgba(15, 20, 30, 0.4);
+        border-radius: 10px;
+      }
+
+      #custom-amount-panel {
+        padding: 1rem;
+      }
+
+      .custom-input-row {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .custom-input-row button {
+        width: 100%;
+      }
+
+      dialog {
+        padding: 1.75rem;
+        max-width: calc(100vw - 2rem);
+      }
+
+      dialog h2 {
+        font-size: 1.3rem;
+      }
+
+      footer {
+        padding: 1rem;
+        justify-content: center;
+      }
+
+      footer button {
+        flex: 1 1 auto;
+        min-width: 120px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      header h1 {
+        font-size: 1.35rem;
+        gap: 0.35rem;
+      }
+
+      header h1::before {
+        font-size: 1.35rem;
+      }
+
+      #progress-summary {
+        font-size: 1rem;
+      }
+
+      #quick-add button {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: 0;
+        padding: 0.7rem 0.75rem;
+        font-size: 0.85rem;
+      }
+
+      section {
+        padding: 1rem 0.75rem;
+      }
+
+      section h2 {
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .modal-actions {
+        flex-direction: column;
+      }
+
+      .modal-actions button {
+        width: 100%;
+      }
+
+      footer button {
+        font-size: 0.9rem;
+        padding: 0.65rem 1rem;
+      }
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      #quick-add button,
+      footer button,
+      .custom-actions button,
+      #time-summary button,
+      #custom-amount-trigger {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #quick-add button:active {
+        transform: scale(0.95);
+      }
+
+      section:hover {
+        transform: none;
+      }
+
+      #quick-add button:hover {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Hydration Tracker</h1>
+    <div id="day-selector" role="group" aria-label="Select day">
+      <button type="button" id="prev-day" aria-label="Previous day">⟨</button>
+      <span id="current-day-label">Today</span>
+      <button type="button" id="next-day" aria-label="Next day">⟩</button>
+      <button type="button" id="jump-today">Today</button>
+      <button type="button" id="pick-day">Pick Date…</button>
+      <input type="date" id="day-picker" hidden>
+    </div>
+    <div id="progress-summary">Today: 0 / 2000 ml (0%)</div>
+    <div id="progress-bar" aria-hidden="true"></div>
+    <div id="quick-add">
+      <div class="row" id="pinned-row" data-row="pinned"></div>
+      <div class="row" id="presets-row" data-row="presets"></div>
+      <div class="row" id="recent-row" data-row="recent"></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="log-panel">
+      <h2 id="log-heading">Today's Log</h2>
+      <div id="log-entries">No entries yet.</div>
+    </section>
+
+    <section id="today-panel">
+      <h2>Quick Add</h2>
+      <form id="quick-add-form" autocomplete="off">
+        <div id="time-control">
+          <div class="field">
+            <label for="quick-add-time">Log time</label>
+            <input type="datetime-local" id="quick-add-time" name="quick-add-time">
+          </div>
+          <div id="time-summary" aria-live="polite">
+            <span id="time-summary-text">Using current time</span>
+            <button type="button" id="time-reset-button">Now</button>
+          </div>
+        </div>
+        <div id="custom-amount-panel" hidden>
+          <div class="field">
+            <label for="custom-amount-input">Custom amount (ml)</label>
+            <div class="custom-input-row">
+              <input type="number" id="custom-amount-input" name="custom-amount-input" min="10" step="10" inputmode="numeric" pattern="[0-9]*">
+              <button type="button" id="custom-amount-submit">Add</button>
+            </div>
+          </div>
+          <div class="custom-actions">
+            <button type="button" id="custom-amount-cancel">Cancel</button>
+          </div>
+        </div>
+        <button type="button" id="custom-amount-trigger">+ Custom Amount</button>
+      </form>
+    </section>
+
+    <section id="history-panel">
+      <h2>14-Day History</h2>
+      <div id="history-chart">
+        <div id="chart-tooltip" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <button id="export-json">Export JSON</button>
+    <button id="import-json">Import JSON</button>
+    <button id="export-csv">Export CSV</button>
+    <button id="open-settings">Settings</button>
+    <input type="file" id="import-file" accept="application/json" hidden>
+  </footer>
+
+  <dialog id="goal-modal" aria-labelledby="goal-modal-title">
+    <form method="dialog" id="goal-form">
+      <h2 id="goal-modal-title">Set Your Daily Goal</h2>
+      <p>We'll use this amount to track your progress.</p>
+      <div class="field">
+        <label for="daily-goal-input">Daily goal (ml)</label>
+        <input type="number" id="daily-goal-input" name="daily-goal-input" min="500" max="10000" step="50" required>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" id="save-goal">Save Goal</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings-modal" aria-labelledby="settings-title">
+    <h2 id="settings-title">Settings</h2>
+    <form id="settings-form">
+      <div class="field-group">
+        <label for="settings-goal">Daily goal (ml)</label>
+        <input type="number" id="settings-goal" min="500" max="10000" step="50" required>
+      </div>
+
+      <div class="field-group">
+        <label for="settings-presets">Preset sizes (ml, comma separated)</label>
+        <input type="text" id="settings-presets" placeholder="250,330,500">
+        <small>Presets appear after pinned buttons. Duplicates are removed automatically.</small>
+      </div>
+
+      <div class="field-group">
+        <label for="settings-pins">Pinned sizes (ml, comma separated)</label>
+        <input type="text" id="settings-pins" placeholder="">
+        <small>Pinned amounts show before presets.</small>
+      </div>
+
+      <div class="field-group">
+        <label for="settings-recent-cap">Recent list capacity</label>
+        <input type="number" id="settings-recent-cap" min="1" max="10" step="1">
+        <small>Maximum number of recent custom sizes to keep.</small>
+      </div>
+
+      <div class="field-group">
+        <label for="settings-round-step">Custom rounding step (ml)</label>
+        <input type="number" id="settings-round-step" min="1" max="250" step="1">
+        <small>Custom inputs round to the nearest step for deduplication.</small>
+      </div>
+
+      <div class="field-group">
+        <button type="button" id="settings-clear-recents" class="mini-button">Clear recent sizes</button>
+      </div>
+
+      <div id="settings-actions">
+        <button type="button" id="settings-cancel">Cancel</button>
+        <button type="submit" id="settings-save">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast-container" aria-live="polite">
+    <div id="delete-toast" role="status">
+      <span id="toast-message"></span>
+      <button type="button" id="toast-undo">Undo</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const STORAGE_KEYS = {
+        settings: 'hydration_settings',
+        events: 'hydration_events',
+      version: 'hydration_version'
+      };
+
+      const DEFAULT_SETTINGS = {
+        daily_goal_ml: 2000,
+        glass_presets_ml: [250, 330, 500],
+        recent_glass_ml: [],
+        recent_glass_cap: 6,
+        round_step_ml: 10,
+        pinned_glass_ml: [],
+        start_of_week: 1
+      };
+
+      const DAY_MS = 86400000;
+      const DELETE_ANIMATION_DURATION = 320;
+      const ENTER_ANIMATION_CLEANUP_MS = 600;
+      const reduceMotionQuery = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)')
+        : null;
+
+      function prefersReducedMotion() {
+        return !!(reduceMotionQuery && reduceMotionQuery.matches);
+      }
+
+      function getDayStart(date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      }
+
+      const state = {
+        settings: null,
+        events: [],
+        editingId: null,
+        viewDateStart: getDayStart(new Date()),
+        lastAddedId: null,
+        lastDeleted: null
+      };
+
+      function safeParse(json, fallback) {
+        try {
+          return JSON.parse(json);
+        } catch (err) {
+          console.warn('Failed to parse stored JSON, reverting to fallback.', err);
+          return fallback;
+        }
+      }
+
+      function normalizeAmountList(list) {
+        if (!Array.isArray(list)) {
+          return [];
+        }
+        const seen = new Set();
+        const amounts = [];
+        for (const value of list) {
+          const num = Math.round(Number(value));
+          if (!Number.isFinite(num) || num <= 0 || seen.has(num)) {
+            continue;
+          }
+          seen.add(num);
+          amounts.push(num);
+        }
+        return amounts;
+      }
+
+      function createEventId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          return window.crypto.randomUUID();
+        }
+        return 'evt_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+      }
+
+      function sanitizeSettings(raw) {
+        const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };
+        merged.daily_goal_ml = Number.isFinite(Number(merged.daily_goal_ml))
+          ? Number(merged.daily_goal_ml)
+          : DEFAULT_SETTINGS.daily_goal_ml;
+        merged.recent_glass_cap = Number.isFinite(Number(merged.recent_glass_cap))
+          ? Number(merged.recent_glass_cap)
+          : DEFAULT_SETTINGS.recent_glass_cap;
+        merged.glass_presets_ml = normalizeAmountList(
+          merged.glass_presets_ml && merged.glass_presets_ml.length
+            ? merged.glass_presets_ml
+            : DEFAULT_SETTINGS.glass_presets_ml
+        );
+        merged.pinned_glass_ml = normalizeAmountList(merged.pinned_glass_ml);
+        merged.recent_glass_ml = normalizeAmountList(merged.recent_glass_ml).slice(
+          0,
+          merged.recent_glass_cap
+        );
+        merged.round_step_ml = Number.isFinite(Number(merged.round_step_ml))
+          ? Number(merged.round_step_ml)
+          : DEFAULT_SETTINGS.round_step_ml;
+        merged.start_of_week = Number.isFinite(Number(merged.start_of_week))
+          ? Number(merged.start_of_week)
+          : DEFAULT_SETTINGS.start_of_week;
+        return merged;
+      }
+
+      function loadSettings() {
+        const raw = localStorage.getItem(STORAGE_KEYS.settings);
+        const parsed = raw ? safeParse(raw, null) : null;
+        return sanitizeSettings(parsed);
+      }
+
+      function saveSettings() {
+        localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(state.settings));
+      }
+
+      function sanitizeEvents(list) {
+        if (!Array.isArray(list)) {
+          return [];
+        }
+        return list
+          .map((event) => {
+            const ts = Number(event && event.ts);
+            const ml = Math.max(0, Math.round(Number(event && event.ml)));
+            return {
+              id: (event && event.id) || createEventId(),
+              ts: Number.isFinite(ts) ? ts : Date.now(),
+              ml,
+              source: (event && event.source) || 'custom'
+            };
+          })
+          .filter((event) => event.ml > 0);
+      }
+
+      function loadEvents() {
+        const raw = localStorage.getItem(STORAGE_KEYS.events);
+        const parsed = raw ? safeParse(raw, null) : null;
+        return sanitizeEvents(parsed);
+      }
+
+      function saveEvents() {
+        localStorage.setItem(STORAGE_KEYS.events, JSON.stringify(state.events));
+      }
+
+      function roundToStep(value, step) {
+        if (!Number.isFinite(value)) {
+          return NaN;
+        }
+        if (!step || step <= 0) {
+          return Math.round(value);
+        }
+        const rounded = Math.round(value / step) * step;
+        return rounded <= 0 ? step : rounded;
+      }
+
+      function isSameDayTimestamp(timestamp, dayStart) {
+        return timestamp >= dayStart && timestamp < dayStart + DAY_MS;
+      }
+
+      function formatViewDateLabel() {
+        const viewDate = new Date(state.viewDateStart);
+        const todayStart = getDayStart(new Date());
+        if (state.viewDateStart === todayStart) {
+          return 'Today';
+        }
+        return viewDate.toLocaleDateString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: viewDate.getFullYear() === new Date().getFullYear() ? undefined : 'numeric'
+        });
+      }
+
+      function toLocalISOString(date) {
+        const offset = date.getTimezoneOffset();
+        const local = new Date(date.getTime() - offset * 60000);
+        return local.toISOString().slice(0, 16);
+      }
+
+      function setTimeInputForViewDate(force = false) {
+        const timeInput = document.getElementById('quick-add-time');
+        if (!timeInput) {
+          return;
+        }
+        if (timeInput.value && !force) {
+          return;
+        }
+        const now = new Date();
+        const base = new Date(state.viewDateStart);
+        if (isSameDayTimestamp(now.getTime(), state.viewDateStart)) {
+          base.setHours(now.getHours(), now.getMinutes(), 0, 0);
+        } else {
+          base.setHours(9, 0, 0, 0);
+        }
+        timeInput.value = toLocalISOString(base);
+        updateTimeSummary();
+      }
+
+      function updateDaySelectorUI() {
+        const label = document.getElementById('current-day-label');
+        const prevButton = document.getElementById('prev-day');
+        const nextButton = document.getElementById('next-day');
+        const todayButton = document.getElementById('jump-today');
+        if (label) {
+          label.textContent = formatViewDateLabel();
+        }
+        const todayStart = getDayStart(new Date());
+        if (nextButton) {
+          nextButton.disabled = state.viewDateStart >= todayStart;
+        }
+        if (todayButton) {
+          todayButton.disabled = state.viewDateStart >= todayStart;
+        }
+      }
+
+      function setViewDate(startTimestamp) {
+        const todayStart = getDayStart(new Date());
+        state.viewDateStart = Math.min(startTimestamp, todayStart);
+        state.editingId = null;
+        updateDaySelectorUI();
+        setTimeInputForViewDate(true);
+        updateProgressUI(state.settings, state.events);
+        renderDayLog();
+      }
+
+      function getSelectedTimestamp() {
+        const input = document.getElementById('quick-add-time');
+        if (input && input.value) {
+          const parsed = new Date(input.value);
+          if (!Number.isNaN(parsed.getTime())) {
+            return parsed.getTime();
+          }
+        }
+        return state.viewDateStart + 9 * 60 * 60 * 1000;
+      }
+
+      function getDayRange(date) {
+        const start = getDayStart(date);
+        return { start, end: start + DAY_MS };
+      }
+
+      function getDailyTotal(events, goalDate) {
+        const { start, end } = getDayRange(goalDate);
+        return events
+          .filter((event) => event.ts >= start && event.ts < end)
+          .reduce((total, event) => total + (event.ml || 0), 0);
+      }
+
+      function formatProgress(totalMl, goalMl) {
+        const pct = goalMl > 0 ? Math.min(100, Math.round((totalMl / goalMl) * 100)) : 0;
+        return {
+          text: `${totalMl} / ${goalMl} ml (${pct}%)`,
+          pct
+        };
+      }
+
+      function ensureProgressBar(pct) {
+        const container = document.getElementById('progress-bar');
+        if (!container) {
+          return;
+        }
+        let bar = document.getElementById('progress-indicator');
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.id = 'progress-indicator';
+          bar.style.height = '14px';
+          bar.style.width = '100%';
+          bar.style.borderRadius = '999px';
+          bar.style.border = '1px solid #2f2f2f';
+          bar.style.overflow = 'hidden';
+          container.appendChild(bar);
+        }
+        let fill = bar.querySelector('[data-role="progress-fill"]');
+        if (!fill) {
+          fill = document.createElement('div');
+          fill.dataset.role = 'progress-fill';
+          fill.style.height = '100%';
+          fill.style.background = 'linear-gradient(90deg, #38bdf8, #0ea5e9)';
+          fill.style.transition = 'width 0.3s ease';
+          bar.appendChild(fill);
+        }
+        const clamped = Math.max(0, Math.min(100, pct));
+        fill.style.width = clamped + '%';
+        fill.style.boxShadow = `0 0 20px rgba(6, 182, 212, ${0.2 + clamped / 200})`;
+      }
+
+      function updateProgressUI(settings, events) {
+        const progressEl = document.getElementById('progress-summary');
+        if (!progressEl) {
+          return;
+        }
+        const viewDate = new Date(state.viewDateStart);
+        const total = getDailyTotal(events, viewDate);
+        const { text, pct } = formatProgress(total, settings.daily_goal_ml);
+        progressEl.textContent = `${formatViewDateLabel()}: ${text}`;
+        ensureProgressBar(pct);
+      }
+
+      function openGoalModal(defaultGoal) {
+        const modal = document.getElementById('goal-modal');
+        const input = document.getElementById('daily-goal-input');
+        if (input) {
+          input.value = defaultGoal;
+        }
+        if (modal && typeof modal.showModal === 'function') {
+          modal.showModal();
+        } else if (modal) {
+          modal.setAttribute('open', 'open');
+        }
+      }
+
+      function closeGoalModal() {
+        const modal = document.getElementById('goal-modal');
+        if (modal && typeof modal.close === 'function') {
+          modal.close();
+        } else if (modal) {
+          modal.removeAttribute('open');
+        }
+      }
+
+      function initGoalModal() {
+        const goalForm = document.getElementById('goal-form');
+        if (goalForm) {
+          goalForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const input = document.getElementById('daily-goal-input');
+            const parsed = input ? parseInt(input.value, 10) : NaN;
+            if (!Number.isFinite(parsed) || parsed <= 0) {
+              if (input) {
+                input.focus();
+                input.setAttribute('aria-invalid', 'true');
+              }
+              return;
+            }
+            if (input) {
+              input.removeAttribute('aria-invalid');
+            }
+            state.settings = {
+              ...state.settings,
+              daily_goal_ml: parsed
+            };
+            saveSettings();
+            localStorage.setItem('hydration_seen_goal_modal', 'yes');
+            updateProgressUI(state.settings, state.events);
+            renderHistoryChart();
+            closeGoalModal();
+          });
+        }
+
+        const modal = document.getElementById('goal-modal');
+        if (modal) {
+          modal.addEventListener('cancel', (evt) => {
+            evt.preventDefault();
+          });
+        }
+
+        const hasSeenGoal = localStorage.getItem('hydration_seen_goal_modal');
+        if (!hasSeenGoal) {
+          openGoalModal(state.settings.daily_goal_ml);
+        }
+      }
+
+      function renderQuickAddRows(settings) {
+        const pinned = Array.from(settings.pinned_glass_ml);
+        const pinnedSet = new Set(pinned);
+
+        const presetSet = new Set();
+        const presets = settings.glass_presets_ml.filter((ml) => {
+          if (pinnedSet.has(ml) || presetSet.has(ml)) {
+            return false;
+          }
+          presetSet.add(ml);
+          return true;
+        });
+
+        const recent = settings.recent_glass_ml.filter(
+          (ml) => !pinnedSet.has(ml) && !presetSet.has(ml)
+        );
+
+        renderQuickAddRow('pinned-row', pinned, 'pinned', 'Pin favorites to see them here.');
+        renderQuickAddRow('presets-row', presets, 'preset');
+        appendCustomQuickButton('presets-row');
+        renderQuickAddRow('recent-row', recent, 'recent', 'Recent custom amounts appear here.');
+      }
+
+      function renderQuickAddRow(rowId, amounts, source, emptyMessage) {
+        const row = document.getElementById(rowId);
+        if (!row) {
+          return;
+        }
+        row.innerHTML = '';
+        if (!amounts.length && emptyMessage) {
+          const span = document.createElement('span');
+          span.className = 'row-placeholder';
+          span.textContent = emptyMessage;
+          row.appendChild(span);
+          return;
+        }
+        for (const amount of amounts) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.dataset.ml = String(amount);
+          button.dataset.source = source;
+          button.className = 'quick-button quick-button-' + source;
+          const label = document.createElement('span');
+          label.className = 'quick-button-label';
+          label.textContent = amount + ' ml';
+          button.appendChild(label);
+          row.appendChild(button);
+        }
+      }
+
+      function appendCustomQuickButton(rowId) {
+        const row = document.getElementById(rowId);
+        if (!row) {
+          return;
+        }
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.action = 'custom';
+        button.className = 'quick-button quick-button-custom';
+        const label = document.createElement('span');
+        label.className = 'quick-button-label';
+        label.textContent = '+ Custom';
+        button.appendChild(label);
+        row.appendChild(button);
+      }
+
+      function handleQuickAddClick(event) {
+        const button = event.target.closest('button');
+        if (!button) {
+          return;
+        }
+        if (button.dataset.action === 'custom') {
+          toggleCustomPanel(true);
+          return;
+        }
+        const amount = Number(button.dataset.ml);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          return;
+        }
+        const source = button.dataset.source || 'preset';
+        logDrink({ amount, source });
+      }
+
+      function initQuickAddHandlers() {
+        const rows = ['pinned-row', 'presets-row', 'recent-row'];
+        rows.forEach((id) => {
+          const row = document.getElementById(id);
+          if (row) {
+            row.addEventListener('click', handleQuickAddClick);
+          }
+        });
+      }
+
+      function toggleCustomPanel(show) {
+        const panel = document.getElementById('custom-amount-panel');
+        const trigger = document.getElementById('custom-amount-trigger');
+        const input = document.getElementById('custom-amount-input');
+        if (!panel || !trigger) {
+          return;
+        }
+        if (show) {
+          panel.hidden = false;
+          trigger.textContent = 'Close Custom';
+          const step = Math.max(1, state.settings.round_step_ml || 1);
+          if (input) {
+            input.step = String(step);
+            input.min = String(step);
+            if (!input.value) {
+              const fallback = Math.max(step, 100);
+              input.value = fallback;
+            }
+            requestAnimationFrame(() => {
+              input.focus();
+              input.select();
+            });
+          }
+        } else {
+          panel.hidden = true;
+          trigger.textContent = '+ Custom Amount';
+          if (input) {
+            input.value = '';
+            input.removeAttribute('aria-invalid');
+          }
+        }
+      }
+
+      function handleCustomSubmit() {
+        const input = document.getElementById('custom-amount-input');
+        if (!input) {
+          return;
+        }
+        const raw = Number(input.value);
+        if (!Number.isFinite(raw) || raw <= 0) {
+          input.setAttribute('aria-invalid', 'true');
+          input.focus();
+          return;
+        }
+        const step = Math.max(1, state.settings.round_step_ml || 1);
+        const rounded = roundToStep(raw, step);
+        const fallback = Math.max(step, 100);
+        if (!input.value) {
+          input.value = fallback;
+        }
+        input.removeAttribute('aria-invalid');
+        logDrink({ amount: rounded, source: 'custom' });
+        input.value = '';
+        toggleCustomPanel(false);
+      }
+
+      function initCustomAmountControls() {
+        const trigger = document.getElementById('custom-amount-trigger');
+        const cancel = document.getElementById('custom-amount-cancel');
+        const submit = document.getElementById('custom-amount-submit');
+        const input = document.getElementById('custom-amount-input');
+
+        if (trigger) {
+          trigger.addEventListener('click', () => {
+            const panel = document.getElementById('custom-amount-panel');
+            const shouldShow = panel ? panel.hidden : true;
+            toggleCustomPanel(shouldShow);
+          });
+        }
+
+        if (cancel) {
+          cancel.addEventListener('click', () => toggleCustomPanel(false));
+        }
+
+        if (submit) {
+          submit.addEventListener('click', handleCustomSubmit);
+        }
+
+        if (input) {
+          input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              handleCustomSubmit();
+            }
+          });
+        }
+      }
+
+      function updateRecentWithAmount(amount) {
+        const step = Math.max(1, state.settings.round_step_ml || 1);
+        const rounded = roundToStep(amount, step);
+        if (!Number.isFinite(rounded) || rounded <= 0) {
+          return false;
+        }
+        const pinnedSet = new Set(state.settings.pinned_glass_ml);
+        const presetSet = new Set(state.settings.glass_presets_ml);
+        let recents = state.settings.recent_glass_ml.filter((ml) => Number.isFinite(ml) && ml > 0);
+        const before = recents.join(',');
+        recents = recents.filter((ml) => ml !== rounded);
+        if (!pinnedSet.has(rounded) && !presetSet.has(rounded)) {
+          recents.unshift(rounded);
+        }
+        if (recents.length > state.settings.recent_glass_cap) {
+          recents = recents.slice(0, state.settings.recent_glass_cap);
+        }
+        if (before === recents.join(',')) {
+          return false;
+        }
+        state.settings.recent_glass_ml = recents;
+        saveSettings();
+        return true;
+      }
+
+      function logDrink({ amount, source }) {
+        const ml = Math.max(0, Math.round(Number(amount)));
+        if (!ml) {
+          return;
+        }
+        const timestamp = getSelectedTimestamp();
+        const event = {
+          id: createEventId(),
+          ts: timestamp,
+          ml,
+          source: source || 'custom'
+        };
+        state.lastAddedId = event.id;
+        state.events.push(event);
+        saveEvents();
+        if (source === 'custom') {
+          const changed = updateRecentWithAmount(ml);
+          if (changed) {
+            renderQuickAddRows(state.settings);
+          }
+        }
+        updateProgressUI(state.settings, state.events);
+        renderDayLog();
+        renderHistoryChart();
+        state.editingId = null;
+      }
+
+      function createTimestampedFilename(prefix, extension) {
+        const now = new Date();
+        const stamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
+        return `${prefix}-${stamp}.${extension}`;
+      }
+
+      function triggerDownload(filename, contents, mime) {
+        const blob = new Blob([contents], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
+      function exportJson() {
+        const payload = {
+          version: 1,
+          exported_at: new Date().toISOString(),
+          settings: state.settings,
+          events: state.events
+        };
+        const filename = createTimestampedFilename('hydration-export', 'json');
+        triggerDownload(filename, JSON.stringify(payload, null, 2), 'application/json');
+      }
+
+      function exportCsv() {
+        const header = ['timestamp_iso', 'ml', 'source'];
+        const lines = [header.join(',')];
+        state.events.forEach((event) => {
+          const iso = new Date(event.ts).toISOString();
+          const ml = Number(event.ml) || 0;
+          const source = (event.source || 'custom').replace(/"/g, '""');
+          const line = [iso, ml, source.includes(',') ? `"${source}"` : source];
+          lines.push(line.join(','));
+        });
+        const filename = createTimestampedFilename('hydration-events', 'csv');
+        triggerDownload(filename, lines.join('\n'), 'text/csv');
+      }
+
+      function validateImportPayload(data) {
+        if (!data || typeof data !== 'object') {
+          return { ok: false, reason: 'File does not contain a JSON object.' };
+        }
+        if (!Array.isArray(data.events)) {
+          return { ok: false, reason: 'Missing `events` array.' };
+        }
+        if (!data.settings || typeof data.settings !== 'object') {
+          return { ok: false, reason: 'Missing `settings` object.' };
+        }
+        return { ok: true };
+      }
+
+      function handleImportJson(file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const text = evt.target && typeof evt.target.result === 'string' ? evt.target.result : '';
+            const payload = JSON.parse(text);
+            const validation = validateImportPayload(payload);
+            if (!validation.ok) {
+              window.alert(`Import failed: ${validation.reason}`);
+              return;
+            }
+            const confirmImport = window.confirm('Replace existing data with imported file?');
+            if (!confirmImport) {
+              return;
+            }
+            state.settings = sanitizeSettings(payload.settings);
+            state.events = sanitizeEvents(payload.events);
+            saveSettings();
+            saveEvents();
+            localStorage.setItem('hydration_seen_goal_modal', 'yes');
+            renderQuickAddRows(state.settings);
+            updateProgressUI(state.settings, state.events);
+            renderDayLog();
+            updateDaySelectorUI();
+            setTimeInputForViewDate(true);
+            renderHistoryChart();
+            state.editingId = null;
+            window.alert('Import successful.');
+          } catch (error) {
+            console.error('Import failed', error);
+            window.alert('Import failed: invalid JSON file.');
+          }
+        };
+        reader.onerror = () => {
+          window.alert('Unable to read the selected file.');
+        };
+        reader.readAsText(file);
+      }
+
+      function formatTimeSummary(date) {
+        const sameViewDay = isSameDayTimestamp(date.getTime(), state.viewDateStart);
+        const label = sameViewDay
+          ? formatViewDateLabel()
+          : date.toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            });
+        const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `${label} at ${timeLabel}`;
+      }
+
+      function updateTimeSummary() {
+        const summary = document.getElementById('time-summary');
+        const summaryText = document.getElementById('time-summary-text');
+        if (!summary || !summaryText) {
+          return;
+        }
+        const timestamp = getSelectedTimestamp();
+        const date = new Date(timestamp);
+        summaryText.textContent = `Using ${formatTimeSummary(date)}`;
+        if (!isSameDayTimestamp(timestamp, state.viewDateStart)) {
+          summary.classList.add('time-custom');
+        } else {
+          summary.classList.remove('time-custom');
+        }
+      }
+
+      function initTimeControls() {
+        const timeInput = document.getElementById('quick-add-time');
+        const resetButton = document.getElementById('time-reset-button');
+        if (timeInput) {
+          timeInput.addEventListener('input', updateTimeSummary);
+          timeInput.addEventListener('change', updateTimeSummary);
+        }
+        if (resetButton) {
+          resetButton.addEventListener('click', () => {
+            if (timeInput) {
+              timeInput.value = toLocalISOString(new Date());
+              timeInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            updateTimeSummary();
+          });
+        }
+        updateTimeSummary();
+      }
+
+      function formatEventTime(ts) {
+        const date = new Date(ts);
+        const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateLabel = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        const todayRange = getDayRange(new Date());
+        const isToday = ts >= todayRange.start && ts < todayRange.end;
+        return {
+          primary: isToday ? timeLabel : `${dateLabel} · ${timeLabel}`,
+          secondary: date.toLocaleString()
+        };
+      }
+
+      function formatLogHeading() {
+        const label = formatViewDateLabel();
+        return label === 'Today' ? "Today's Log" : `${label} Log`;
+      }
+
+      function updateLogHeading() {
+        const heading = document.getElementById('log-heading');
+        if (!heading) {
+          return;
+        }
+        heading.textContent = formatLogHeading();
+      }
+
+      function renderDayLog() {
+        const container = document.getElementById('log-entries');
+        if (!container) {
+          return;
+        }
+        updateLogHeading();
+        const start = state.viewDateStart;
+        const end = start + DAY_MS;
+        const entries = state.events
+          .filter((event) => event.ts >= start && event.ts < end)
+          .sort((a, b) => b.ts - a.ts);
+        container.innerHTML = '';
+
+        if (!entries.length) {
+          const empty = document.createElement('p');
+          empty.className = 'log-empty';
+          empty.textContent = `No entries for ${formatViewDateLabel()}.`;
+          container.appendChild(empty);
+          state.lastAddedId = null;
+          hideDeleteToast();
+          return;
+        }
+
+        for (const event of entries) {
+          const item = document.createElement('article');
+          item.className = 'log-item';
+          item.dataset.id = event.id;
+          if (state.editingId === event.id) {
+            item.classList.add('log-editing');
+            item.appendChild(buildEditForm(event));
+          } else {
+            item.appendChild(buildLogDisplay(event));
+          }
+          container.appendChild(item);
+          if (state.lastAddedId && state.lastAddedId === event.id) {
+            applyLogEnterAnimation(item);
+          }
+        }
+
+        state.lastAddedId = null;
+        hideDeleteToast();
+      }
+
+      function applyLogEnterAnimation(element) {
+        if (!element || prefersReducedMotion()) {
+          return;
+        }
+        element.classList.add('log-item--enter');
+        const cleanup = () => element.classList.remove('log-item--enter');
+        const timer = window.setTimeout(() => {
+          cleanup();
+        }, ENTER_ANIMATION_CLEANUP_MS);
+        element.addEventListener(
+          'animationend',
+          (evt) => {
+            if (evt.animationName === 'logItemEnter') {
+              window.clearTimeout(timer);
+              cleanup();
+            }
+          },
+          { once: true }
+        );
+      }
+
+      function buildLogDisplay(event) {
+        const wrapper = document.createElement('div');
+        const top = document.createElement('div');
+        top.className = 'log-main';
+
+        const amount = document.createElement('div');
+        amount.className = 'log-amount';
+        amount.textContent = `${event.ml} ml`;
+
+        const actions = document.createElement('div');
+        actions.className = 'log-actions';
+
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.dataset.action = 'edit';
+        editButton.textContent = 'Edit';
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.dataset.action = 'delete';
+        deleteButton.textContent = 'Delete';
+
+        actions.append(editButton, deleteButton);
+        top.append(amount, actions);
+
+        const meta = document.createElement('div');
+        meta.className = 'log-meta';
+        const { primary } = formatEventTime(event.ts);
+        const timeChip = document.createElement('span');
+        timeChip.textContent = primary;
+        meta.appendChild(timeChip);
+
+        const sourceChip = document.createElement('span');
+        sourceChip.className = 'log-source';
+        sourceChip.textContent = event.source || 'custom';
+        meta.appendChild(sourceChip);
+
+        wrapper.append(top, meta);
+        return wrapper;
+      }
+
+      function buildEditForm(event) {
+        const fragment = document.createElement('div');
+        const form = document.createElement('div');
+        form.className = 'log-edit-form';
+
+        const amountField = document.createElement('div');
+        amountField.className = 'field';
+        const amountLabel = document.createElement('label');
+        amountLabel.textContent = 'Amount (ml)';
+        amountLabel.setAttribute('for', `edit-amount-${event.id}`);
+        const amountInput = document.createElement('input');
+        amountInput.type = 'number';
+        amountInput.id = `edit-amount-${event.id}`;
+        amountInput.className = 'edit-ml';
+        amountInput.min = '10';
+        amountInput.step = String(Math.max(1, state.settings.round_step_ml || 1));
+        amountInput.value = String(event.ml);
+        amountField.append(amountLabel, amountInput);
+
+        const timeField = document.createElement('div');
+        timeField.className = 'field';
+        const timeLabel = document.createElement('label');
+        timeLabel.textContent = 'Logged at';
+        timeLabel.setAttribute('for', `edit-time-${event.id}`);
+        const timeInput = document.createElement('input');
+        timeInput.type = 'datetime-local';
+        timeInput.id = `edit-time-${event.id}`;
+        timeInput.className = 'edit-time';
+        timeInput.value = toLocalISOString(new Date(event.ts));
+        timeField.append(timeLabel, timeInput);
+
+        const buttons = document.createElement('div');
+        buttons.className = 'log-actions';
+
+        const saveButton = document.createElement('button');
+        saveButton.type = 'button';
+        saveButton.dataset.action = 'save-edit';
+        saveButton.textContent = 'Save';
+
+        const cancelButton = document.createElement('button');
+        cancelButton.type = 'button';
+        cancelButton.dataset.action = 'cancel-edit';
+        cancelButton.textContent = 'Cancel';
+
+        buttons.append(saveButton, cancelButton);
+        form.append(amountField, timeField, buttons);
+
+        fragment.appendChild(form);
+        return fragment;
+      }
+
+      function findEventById(id) {
+        return state.events.find((event) => event.id === id);
+      }
+
+      function updateEventInState(id, updater) {
+        const index = state.events.findIndex((event) => event.id === id);
+        if (index === -1) {
+          return null;
+        }
+        const updated = updater({ ...state.events[index] });
+        state.events[index] = updated;
+        return updated;
+      }
+
+      function handleLogAction(event) {
+        const button = event.target.closest('button[data-action]');
+        if (!button) {
+          return;
+        }
+        const item = button.closest('.log-item');
+        if (!item) {
+          return;
+        }
+        const id = item.dataset.id;
+        const action = button.dataset.action;
+
+        if (action === 'edit') {
+          state.editingId = id;
+          renderDayLog();
+          return;
+        }
+
+        if (action === 'cancel-edit') {
+          state.editingId = null;
+          renderDayLog();
+          return;
+        }
+
+        if (action === 'save-edit') {
+          const amountInput = item.querySelector('.edit-ml');
+          const timeInput = item.querySelector('.edit-time');
+          const ml = amountInput ? Number(amountInput.value) : NaN;
+          const timeValue = timeInput ? timeInput.value : '';
+          const parsedTime = timeValue ? new Date(timeValue) : new Date(NaN);
+          let invalid = false;
+          if (!Number.isFinite(ml) || ml <= 0) {
+            invalid = true;
+            amountInput && amountInput.setAttribute('aria-invalid', 'true');
+          } else {
+            amountInput && amountInput.removeAttribute('aria-invalid');
+          }
+          if (Number.isNaN(parsedTime.getTime())) {
+            invalid = true;
+            timeInput && timeInput.setAttribute('aria-invalid', 'true');
+          } else {
+            timeInput && timeInput.removeAttribute('aria-invalid');
+          }
+          if (invalid) {
+            return;
+          }
+
+          updateEventInState(id, (current) => {
+            const next = { ...current };
+            const roundedMl = Math.max(0, Math.round(ml));
+            const nextTimestamp = parsedTime.getTime();
+            const amountChanged = next.ml !== roundedMl;
+            next.ml = roundedMl;
+            next.ts = nextTimestamp;
+            if (amountChanged) {
+              updateRecentWithAmount(roundedMl);
+              renderQuickAddRows(state.settings);
+            }
+            return next;
+          });
+
+          saveEvents();
+          state.editingId = null;
+          updateProgressUI(state.settings, state.events);
+          renderDayLog();
+          renderHistoryChart();
+          return;
+        }
+
+        if (action === 'delete') {
+          const deletedEvent = state.events.find((evt) => evt.id === id);
+          const finalizeDelete = () => {
+            state.events = state.events.filter((evt) => evt.id !== id);
+            saveEvents();
+            state.editingId = null;
+            updateProgressUI(state.settings, state.events);
+            renderDayLog();
+            renderHistoryChart();
+            if (deletedEvent) {
+              showDeleteToast(deletedEvent);
+            }
+          };
+          item.classList.add('log-deleting');
+          item.style.pointerEvents = 'none';
+          const delay = prefersReducedMotion() ? 0 : DELETE_ANIMATION_DURATION;
+          if (delay === 0) {
+            finalizeDelete();
+          } else {
+            window.setTimeout(finalizeDelete, delay);
+          }
+          return;
+        }
+      }
+
+      function buildHistorySeries(events, days = 14) {
+        const todayRange = getDayRange(new Date());
+        const series = [];
+        for (let offset = days - 1; offset >= 0; offset -= 1) {
+          const start = todayRange.start - offset * DAY_MS;
+          const end = start + DAY_MS;
+          const total = events
+            .filter((event) => event.ts >= start && event.ts < end)
+            .reduce((sum, event) => sum + (event.ml || 0), 0);
+          series.push({ start, end, total, date: new Date(start) });
+        }
+        return series;
+      }
+
+      function formatDayLabel(date) {
+        return date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' });
+      }
+
+      function buildBarTooltipText(entry) {
+        const dateLabel = entry.date.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+        return `${dateLabel} — ${entry.total} ml`;
+      }
+
+      function positionTooltip(event, tooltip, container) {
+        const bounds = container.getBoundingClientRect();
+        let x;
+        let y;
+        if (event instanceof MouseEvent) {
+          x = event.clientX - bounds.left;
+          y = event.clientY - bounds.top;
+        } else {
+          const target = event.target;
+          if (target && target.getBoundingClientRect) {
+            const targetBounds = target.getBoundingClientRect();
+            x = targetBounds.left - bounds.left + targetBounds.width / 2;
+            y = targetBounds.top - bounds.top;
+          } else {
+            x = bounds.width / 2;
+            y = bounds.height / 2;
+          }
+        }
+        tooltip.style.left = `${x}px`;
+        tooltip.style.top = `${y}px`;
+      }
+
+      function parseAmountInput(value) {
+        if (!value) {
+          return [];
+        }
+        const parts = value.split(/[,\s]+/).map((part) => Number(part.trim()));
+        return normalizeAmountList(parts.filter((num) => Number.isFinite(num) && num > 0));
+      }
+
+      function getQuickAddButtons() {
+        return Array.from(document.querySelectorAll('#quick-add button'));
+      }
+
+      function hideDeleteToast() {
+        const toast = document.getElementById('delete-toast');
+        if (state.lastDeleted && state.lastDeleted.timer) {
+          clearTimeout(state.lastDeleted.timer);
+        }
+        state.lastDeleted = null;
+        if (toast) {
+          toast.classList.remove('visible');
+        }
+      }
+
+      function showDeleteToast(deletedEvent) {
+        const toast = document.getElementById('delete-toast');
+        const message = document.getElementById('toast-message');
+        const undoButton = document.getElementById('toast-undo');
+        if (!toast || !message || !undoButton) {
+          return;
+        }
+
+        if (state.lastDeleted && state.lastDeleted.timer) {
+          clearTimeout(state.lastDeleted.timer);
+        }
+
+        message.textContent = `${deletedEvent.ml} ml removed (${formatViewDateLabel()})`;
+        toast.classList.add('visible');
+
+        const timer = window.setTimeout(() => {
+          hideDeleteToast();
+        }, 4000);
+
+        state.lastDeleted = { event: deletedEvent, timer };
+
+        undoButton.onclick = () => {
+          if (!state.lastDeleted) {
+            return;
+          }
+          const restored = { ...state.lastDeleted.event };
+          state.lastAddedId = restored.id;
+          state.events.push(restored);
+          state.events.sort((a, b) => a.ts - b.ts);
+          saveEvents();
+          updateProgressUI(state.settings, state.events);
+          renderDayLog();
+          renderHistoryChart();
+          hideDeleteToast();
+        };
+      }
+
+      function openSettingsModal() {
+        const modal = document.getElementById('settings-modal');
+        if (!modal) {
+          return;
+        }
+        const goalInput = document.getElementById('settings-goal');
+        const presetsInput = document.getElementById('settings-presets');
+        const pinsInput = document.getElementById('settings-pins');
+        const capInput = document.getElementById('settings-recent-cap');
+        const roundInput = document.getElementById('settings-round-step');
+        if (goalInput) goalInput.value = String(state.settings.daily_goal_ml);
+        if (presetsInput) presetsInput.value = state.settings.glass_presets_ml.join(', ');
+        if (pinsInput) pinsInput.value = state.settings.pinned_glass_ml.join(', ');
+        if (capInput) capInput.value = String(state.settings.recent_glass_cap);
+        if (roundInput) roundInput.value = String(state.settings.round_step_ml);
+        if (typeof modal.showModal === 'function') {
+          modal.showModal();
+        } else {
+          modal.setAttribute('open', 'open');
+        }
+      }
+
+      function closeSettingsModal() {
+        const modal = document.getElementById('settings-modal');
+        if (!modal) {
+          return;
+        }
+        if (typeof modal.close === 'function') {
+          modal.close();
+        } else {
+          modal.removeAttribute('open');
+        }
+      }
+
+      function initSettingsModal() {
+        const openButton = document.getElementById('open-settings');
+        if (openButton) {
+          openButton.addEventListener('click', openSettingsModal);
+        }
+
+        const modal = document.getElementById('settings-modal');
+        if (!modal) {
+          return;
+        }
+
+        modal.addEventListener('cancel', (event) => {
+          event.preventDefault();
+          closeSettingsModal();
+        });
+
+        const cancelButton = document.getElementById('settings-cancel');
+        if (cancelButton) {
+          cancelButton.addEventListener('click', closeSettingsModal);
+        }
+
+        const clearRecents = document.getElementById('settings-clear-recents');
+        if (clearRecents) {
+          clearRecents.addEventListener('click', () => {
+            state.settings.recent_glass_ml = [];
+            saveSettings();
+            renderQuickAddRows(state.settings);
+            window.alert('Recent sizes cleared.');
+          });
+        }
+
+        const form = document.getElementById('settings-form');
+        if (form) {
+          form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const goalInput = document.getElementById('settings-goal');
+            const presetsInput = document.getElementById('settings-presets');
+            const pinsInput = document.getElementById('settings-pins');
+            const capInput = document.getElementById('settings-recent-cap');
+            const roundInput = document.getElementById('settings-round-step');
+
+            const goalValue = goalInput ? Number(goalInput.value) : state.settings.daily_goal_ml;
+            if (!Number.isFinite(goalValue) || goalValue <= 0) {
+              window.alert('Please provide a valid daily goal.');
+              return;
+            }
+
+            const presets = presetsInput ? parseAmountInput(presetsInput.value) : state.settings.glass_presets_ml;
+            const pins = pinsInput ? parseAmountInput(pinsInput.value) : state.settings.pinned_glass_ml;
+            const cap = capInput ? Number(capInput.value) : state.settings.recent_glass_cap;
+            const round = roundInput ? Number(roundInput.value) : state.settings.round_step_ml;
+
+            const candidate = sanitizeSettings({
+              ...state.settings,
+              daily_goal_ml: goalValue,
+              glass_presets_ml: presets,
+              pinned_glass_ml: pins,
+              recent_glass_cap: cap,
+              round_step_ml: round
+            });
+
+            candidate.recent_glass_ml = candidate.recent_glass_ml.slice(0, candidate.recent_glass_cap);
+
+            state.settings = candidate;
+            saveSettings();
+            renderQuickAddRows(state.settings);
+            updateProgressUI(state.settings, state.events);
+            renderDayLog();
+            renderHistoryChart();
+            closeSettingsModal();
+          });
+        }
+      }
+
+      function renderHistoryChart() {
+        const container = document.getElementById('history-chart');
+        if (!container) {
+          return;
+        }
+        const tooltip = document.getElementById('chart-tooltip');
+        if (tooltip) {
+          tooltip.classList.remove('visible');
+        }
+        const existingSvg = container.querySelector('svg');
+        if (existingSvg) {
+          existingSvg.remove();
+        }
+        const existingEmpty = container.querySelector('.chart-empty');
+        if (existingEmpty) {
+          existingEmpty.remove();
+        }
+
+        const series = buildHistorySeries(state.events, 14);
+        const goal = Math.max(0, state.settings.daily_goal_ml || 0);
+        const maxSeries = series.reduce((max, entry) => Math.max(max, entry.total), 0);
+        const maxValue = Math.max(goal, maxSeries, 10);
+
+        if (maxValue === 0) {
+          const emptyMessage = document.createElement('div');
+          emptyMessage.className = 'chart-empty';
+          emptyMessage.textContent = 'Log drinks to see your 14-day history.';
+          container.appendChild(emptyMessage);
+          return;
+        }
+
+        const containerWidth = container.clientWidth || container.offsetWidth || 320;
+        const width = Math.max(420, containerWidth);
+        const height = 200;
+        const margin = { top: 18, right: 18, bottom: 32, left: 40 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('role', 'img');
+        svg.setAttribute('aria-label', '14 day hydration history chart');
+
+        const defs = document.createElementNS(svg.namespaceURI, 'defs');
+        const gradient = document.createElementNS(svg.namespaceURI, 'linearGradient');
+        gradient.setAttribute('id', 'barGradient');
+        gradient.setAttribute('x1', '0');
+        gradient.setAttribute('x2', '0');
+        gradient.setAttribute('y1', '0');
+        gradient.setAttribute('y2', '1');
+        const stop1 = document.createElementNS(svg.namespaceURI, 'stop');
+        stop1.setAttribute('offset', '0%');
+        stop1.setAttribute('stop-color', 'rgba(56, 189, 248, 0.95)');
+        const stop2 = document.createElementNS(svg.namespaceURI, 'stop');
+        stop2.setAttribute('offset', '100%');
+        stop2.setAttribute('stop-color', 'rgba(6, 182, 212, 0.6)');
+        gradient.append(stop1, stop2);
+        defs.appendChild(gradient);
+        svg.appendChild(defs);
+
+        const mainGroup = document.createElementNS(svg.namespaceURI, 'g');
+        mainGroup.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
+        svg.appendChild(mainGroup);
+
+        const gridGroup = document.createElementNS(svg.namespaceURI, 'g');
+        gridGroup.setAttribute('class', 'chart-grid');
+        const gridLines = 4;
+        for (let i = 0; i <= gridLines; i += 1) {
+          const y = innerHeight - (innerHeight / gridLines) * i;
+          const line = document.createElementNS(svg.namespaceURI, 'line');
+          line.setAttribute('x1', '0');
+          line.setAttribute('x2', innerWidth);
+          line.setAttribute('y1', y);
+          line.setAttribute('y2', y);
+          gridGroup.appendChild(line);
+        }
+        mainGroup.appendChild(gridGroup);
+
+        if (goal > 0) {
+          const ratio = Math.min(1, goal / maxValue);
+          const goalY = innerHeight * (1 - ratio);
+          const goalLine = document.createElementNS(svg.namespaceURI, 'line');
+          goalLine.setAttribute('class', 'goal-line');
+          goalLine.setAttribute('x1', '0');
+          goalLine.setAttribute('x2', innerWidth);
+          goalLine.setAttribute('y1', goalY);
+          goalLine.setAttribute('y2', goalY);
+          mainGroup.appendChild(goalLine);
+        }
+
+        const barGroup = document.createElementNS(svg.namespaceURI, 'g');
+        const axisGroup = document.createElementNS(svg.namespaceURI, 'g');
+        axisGroup.setAttribute('class', 'chart-axis');
+
+        const slotWidth = innerWidth / series.length;
+        const barWidth = Math.max(10, Math.min(Math.max(8, slotWidth - 6), slotWidth * 0.45));
+
+        series.forEach((entry, index) => {
+          const rawHeight = innerHeight * (entry.total / maxValue);
+          const barHeight = entry.total > 0 ? rawHeight : Math.min(4, innerHeight * 0.15);
+          const barX = index * slotWidth + (slotWidth - barWidth) / 2;
+          const barY = innerHeight - barHeight;
+
+          const rect = document.createElementNS(svg.namespaceURI, 'rect');
+          rect.setAttribute('class', 'chart-bar');
+          rect.setAttribute('x', barX);
+          rect.setAttribute('y', barY);
+          rect.setAttribute('width', barWidth);
+          rect.setAttribute('height', barHeight);
+          rect.setAttribute('rx', 4);
+          rect.setAttribute('ry', 4);
+          rect.setAttribute('tabindex', '0');
+          rect.dataset.dateLabel = buildBarTooltipText(entry);
+
+          const handleEnter = (event) => {
+            if (!tooltip) {
+              return;
+            }
+            tooltip.textContent = rect.dataset.dateLabel || '';
+            tooltip.classList.add('visible');
+            positionTooltip(event, tooltip, container);
+            rect.classList.add('chart-bar--active');
+          };
+
+          const handleMove = (event) => {
+            if (!tooltip || !tooltip.classList.contains('visible')) {
+              return;
+            }
+            positionTooltip(event, tooltip, container);
+          };
+
+          const handleLeave = () => {
+            if (tooltip) {
+              tooltip.classList.remove('visible');
+            }
+            rect.classList.remove('chart-bar--active');
+          };
+
+          rect.addEventListener('mouseenter', handleEnter);
+          rect.addEventListener('focus', handleEnter);
+          rect.addEventListener('mousemove', handleMove);
+          rect.addEventListener('mouseleave', handleLeave);
+          rect.addEventListener('blur', handleLeave);
+
+          barGroup.appendChild(rect);
+
+          const label = document.createElementNS(svg.namespaceURI, 'text');
+          label.textContent = formatDayLabel(entry.date);
+          label.setAttribute('x', barX + barWidth / 2);
+          label.setAttribute('y', innerHeight + 18);
+          label.setAttribute('text-anchor', 'middle');
+          axisGroup.appendChild(label);
+        });
+
+        mainGroup.append(barGroup, axisGroup);
+        container.appendChild(svg);
+      }
+
+      function bootstrap() {
+        state.settings = loadSettings();
+        state.events = loadEvents();
+        setTimeInputForViewDate(true);
+        initTimeControls();
+        renderQuickAddRows(state.settings);
+        initQuickAddHandlers();
+        initCustomAmountControls();
+        updateProgressUI(state.settings, state.events);
+        initGoalModal();
+        renderDayLog();
+        renderHistoryChart();
+
+        const logContainer = document.getElementById('log-entries');
+        if (logContainer) {
+          logContainer.addEventListener('click', handleLogAction);
+        }
+
+        const exportJsonButton = document.getElementById('export-json');
+        if (exportJsonButton) {
+          exportJsonButton.addEventListener('click', exportJson);
+        }
+
+        const exportCsvButton = document.getElementById('export-csv');
+        if (exportCsvButton) {
+          exportCsvButton.addEventListener('click', exportCsv);
+        }
+
+        const importJsonButton = document.getElementById('import-json');
+        const importInput = document.getElementById('import-file');
+        if (importJsonButton && importInput) {
+          importJsonButton.addEventListener('click', () => {
+            importInput.value = '';
+            importInput.click();
+          });
+          importInput.addEventListener('change', () => {
+            if (importInput.files && importInput.files[0]) {
+              handleImportJson(importInput.files[0]);
+            }
+            importInput.value = '';
+          });
+        }
+
+        initSettingsModal();
+        updateDaySelectorUI();
+
+        const prevDayButton = document.getElementById('prev-day');
+        const nextDayButton = document.getElementById('next-day');
+        const todayButton = document.getElementById('jump-today');
+        const pickDayButton = document.getElementById('pick-day');
+        const dayPicker = document.getElementById('day-picker');
+
+        if (prevDayButton) {
+          prevDayButton.addEventListener('click', () => {
+            setViewDate(state.viewDateStart - DAY_MS);
+          });
+        }
+
+        if (nextDayButton) {
+          nextDayButton.addEventListener('click', () => {
+            setViewDate(state.viewDateStart + DAY_MS);
+          });
+        }
+
+        if (todayButton) {
+          todayButton.addEventListener('click', () => {
+            setViewDate(getDayStart(new Date()));
+          });
+        }
+
+        if (pickDayButton && dayPicker) {
+          pickDayButton.addEventListener('click', () => {
+            const viewDate = new Date(state.viewDateStart);
+            const year = viewDate.getFullYear();
+            const month = String(viewDate.getMonth() + 1).padStart(2, '0');
+            const day = String(viewDate.getDate()).padStart(2, '0');
+            dayPicker.value = `${year}-${month}-${day}`;
+            if (typeof dayPicker.showPicker === 'function') {
+              dayPicker.showPicker();
+            } else {
+              dayPicker.click();
+            }
+          });
+
+          dayPicker.addEventListener('change', () => {
+            if (dayPicker.value) {
+              const [year, month, day] = dayPicker.value.split('-').map(Number);
+              const selected = new Date(year, month - 1, day);
+              setViewDate(getDayStart(selected));
+            }
+          });
+        }
+
+        const handleGlobalKeydown = (event) => {
+          if (event.altKey || event.ctrlKey || event.metaKey) {
+            return;
+          }
+          const active = document.activeElement;
+          const activeTag = active ? active.tagName : '';
+          const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || (active && active.isContentEditable);
+          const goalModal = document.getElementById('goal-modal');
+          const settingsModal = document.getElementById('settings-modal');
+          const modalOpen = (goalModal && goalModal.open) || (settingsModal && settingsModal.open);
+          if (modalOpen && !isTyping) {
+            return;
+          }
+          if (isTyping) {
+            return;
+          }
+
+          const todayStart = getDayStart(new Date());
+
+          if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            setViewDate(state.viewDateStart - DAY_MS);
+            return;
+          }
+
+          if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            setViewDate(state.viewDateStart + DAY_MS);
+            return;
+          }
+
+          if (event.key === 't' || event.key === 'T') {
+            event.preventDefault();
+            setViewDate(todayStart);
+            return;
+          }
+
+          if (event.key === '+' || event.key === '=') {
+            const customTrigger = document.getElementById('custom-amount-trigger');
+            if (customTrigger) {
+              event.preventDefault();
+              customTrigger.click();
+            }
+            return;
+          }
+
+          if (/^[1-9]$/.test(event.key)) {
+            const buttons = getQuickAddButtons();
+            const index = Number(event.key) - 1;
+            if (buttons[index]) {
+              event.preventDefault();
+              buttons[index].click();
+            }
+          }
+        };
+
+        document.addEventListener('keydown', handleGlobalKeydown);
+      }
+
+      document.addEventListener('DOMContentLoaded', bootstrap);
+    })();
+  </script>
+</body>
+</html>

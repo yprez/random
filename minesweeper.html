@@ -548,9 +548,78 @@
 
                 this.loadHighScores();
                 this.loadTheme();
-                this.init();
                 this.setupEventListeners();
                 this.faceBtn = document.getElementById('face-btn');
+
+                // Try to load saved game, otherwise init new
+                if (!this.loadGameState()) {
+                    this.init();
+                }
+            }
+
+            saveGameState() {
+                // Only save if game is in progress
+                if (!this.gameStarted || this.gameOver) {
+                    localStorage.removeItem('minesweeper-gamestate');
+                    return;
+                }
+
+                const state = {
+                    board: this.board,
+                    rows: this.rows,
+                    cols: this.cols,
+                    mines: this.mines,
+                    revealed: this.revealed,
+                    flagCount: this.flagCount,
+                    timerValue: this.timerValue,
+                    currentDifficulty: this.currentDifficulty,
+                    cellsToWin: this.cellsToWin
+                };
+                localStorage.setItem('minesweeper-gamestate', JSON.stringify(state));
+            }
+
+            loadGameState() {
+                const saved = localStorage.getItem('minesweeper-gamestate');
+                if (!saved) return false;
+
+                try {
+                    const state = JSON.parse(saved);
+
+                    this.board = state.board;
+                    this.rows = state.rows;
+                    this.cols = state.cols;
+                    this.mines = state.mines;
+                    this.revealed = state.revealed;
+                    this.flagCount = state.flagCount;
+                    this.timerValue = state.timerValue;
+                    this.currentDifficulty = state.currentDifficulty;
+                    this.cellsToWin = state.cellsToWin;
+                    this.gameStarted = true;
+                    this.gameOver = false;
+
+                    // Render the restored board
+                    this.renderBoard();
+                    this.updateTimer();
+                    this.updateFlagCount();
+                    this.displayHighScores();
+                    this.updateTabs();
+
+                    // Restart timer
+                    this.timerInterval = setInterval(() => {
+                        this.timerValue++;
+                        this.updateTimer();
+                        this.saveGameState();
+                    }, 1000);
+
+                    return true;
+                } catch (e) {
+                    localStorage.removeItem('minesweeper-gamestate');
+                    return false;
+                }
+            }
+
+            clearGameState() {
+                localStorage.removeItem('minesweeper-gamestate');
             }
 
             loadHighScores() {
@@ -610,6 +679,9 @@
             init() {
                 if (this.isAnimating) return;
 
+                // Clear saved game state
+                this.clearGameState();
+
                 this.board = [];
                 this.revealed = 0;
                 this.flagCount = 0;
@@ -661,7 +733,9 @@
                 this.timerInterval = setInterval(() => {
                     this.timerValue++;
                     this.updateTimer();
+                    this.saveGameState();
                 }, 1000);
+                this.saveGameState();
             }
 
             placeMines(safeRow, safeCol) {
@@ -799,6 +873,7 @@
 
                     if (!this.gameStarted) this.startGame(row, col);
                     this.revealCell(row, col);
+                    this.saveGameState();
                 });
 
                 // Right click
@@ -817,6 +892,7 @@
                     this.cycleFlagState(row, col);
                     this.updateCellDisplay(cell, this.board[row][col]);
                     this.updateFlagCount();
+                    this.saveGameState();
                 });
 
                 // Double click chord
@@ -831,6 +907,7 @@
 
                     if (cellData.isRevealed && cellData.neighborMines > 0) {
                         this.chordReveal(row, col);
+                        this.saveGameState();
                     }
                 });
 
@@ -853,6 +930,7 @@
                         this.cycleFlagState(row, col);
                         this.updateCellDisplay(cell, this.board[row][col]);
                         this.updateFlagCount();
+                        this.saveGameState();
                         if (navigator.vibrate) navigator.vibrate(50);
                     }, 500);
                 }, { passive: true });
@@ -997,6 +1075,7 @@
             endGame(isWin, explodedRow, explodedCol) {
                 this.gameOver = true;
                 clearInterval(this.timerInterval);
+                this.clearGameState();
 
                 // Update face
                 document.getElementById('face-btn').textContent = isWin ? '😎' : '😵';

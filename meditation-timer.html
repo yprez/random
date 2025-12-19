@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meditation Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #151c3b;
+            --bg-card: #1a2144;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --accent: #7c3aed;
+            --accent-light: #a78bfa;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #2a3352;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --breath-cycle: 10s;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent-light), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .timer-card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .timer-display {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto 40px;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 8;
+        }
+
+        .progress-ring-fill {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .timer-text .time {
+            font-size: 3.5rem;
+            font-weight: 200;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 2px;
+        }
+
+        .timer-text .status {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            font-weight: 500;
+        }
+
+        .btn.primary:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-light);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .controls .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .custom-time {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .custom-time input {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 15px;
+            border-radius: 12px;
+            width: 100px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .custom-time input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .settings {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            margin-bottom: 30px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .setting-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: var(--border);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .toggle.active {
+            background: var(--accent);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .toggle.active::after {
+            transform: translateX(22px);
+        }
+
+        input[type="range"] {
+            width: 120px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .stats-card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 300;
+            color: var(--accent-light);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .history {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .history-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .history-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--accent);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .shortcuts {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .shortcuts h3 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            color: var(--accent-light);
+        }
+
+        .shortcuts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .shortcut-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .shortcut-key {
+            background: var(--bg-secondary);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            color: var(--accent-light);
+            border: 1px solid var(--border);
+        }
+
+        .breathing-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent-light), transparent);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        .breathing-guide.active {
+            opacity: 0.3;
+            animation: breathe var(--breath-cycle) linear infinite;
+        }
+
+        @keyframes breathe {
+            0% { transform: translate(-50%, -50%) scale(0.8); }
+            25% { transform: translate(-50%, -50%) scale(1.3); }
+            50% { transform: translate(-50%, -50%) scale(1.3); }
+            75% { transform: translate(-50%, -50%) scale(0.8); }
+            100% { transform: translate(-50%, -50%) scale(0.8); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 2rem; }
+            .timer-display { width: 240px; height: 240px; }
+            .timer-text .time { font-size: 2.5rem; }
+            .preset-buttons { grid-template-columns: repeat(2, 1fr); }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MEDITATION TIMER</h1>
+            <p>Local-first • No tracking • Fully offline</p>
+        </div>
+
+        <div class="timer-card">
+            <div class="timer-display">
+                <svg width="280" height="280" class="progress-ring">
+                    <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#a78bfa" />
+                            <stop offset="100%" stop-color="#7c3aed" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="140" cy="140" r="130" class="progress-ring-bg"></circle>
+                    <circle cx="140" cy="140" r="130" class="progress-ring-fill" 
+                            stroke-dasharray="816.8" 
+                            stroke-dashoffset="816.8"></circle>
+                </svg>
+                <div class="timer-text">
+                    <div class="time" id="timeDisplay">00:00</div>
+                    <div class="status" id="statusText">Ready</div>
+                </div>
+                <div class="breathing-guide" id="breathingGuide"></div>
+            </div>
+
+            <div class="preset-buttons">
+                <button class="btn" data-minutes="1">1 min</button>
+                <button class="btn" data-minutes="3">3 min</button>
+                <button class="btn active" data-minutes="5">5 min</button>
+                <button class="btn" data-minutes="10">10 min</button>
+                <button class="btn" data-minutes="15">15 min</button>
+                <button class="btn" data-minutes="20">20 min</button>
+                <button class="btn" data-minutes="30">30 min</button>
+                <button class="btn" data-minutes="45">45 min</button>
+                <button class="btn" id="openSitBtn">Open Sit</button>
+            </div>
+
+            <div class="custom-time">
+                <label for="customMinutes">Custom duration:</label>
+                <input type="number" id="customMinutes" min="1" max="180" value="5">
+                <span>minutes</span>
+                <button class="btn" id="setCustomTime">Set</button>
+            </div>
+
+            <div class="controls">
+                <button class="btn primary" id="startBtn">Start</button>
+                <button class="btn" id="pauseBtn" style="display:none">Pause</button>
+                <button class="btn" id="resumeBtn" style="display:none">Resume</button>
+                <button class="btn" id="resetBtn">Reset</button>
+            </div>
+
+            <div class="settings">
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Halfway Chime</span>
+                    </div>
+                    <div class="toggle" id="halfwayToggle"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Breathing Guide</span>
+                    </div>
+                    <div class="toggle" id="breathingToggle"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Box Breath Duration</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="range" id="breathDurationSlider" min="3" max="8" value="5">
+                        <span id="breathDurationValue" style="color: var(--text-secondary); font-size: 0.85rem;">5s</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Volume</span>
+                    </div>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="30">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Sound Theme</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="soundTheme" class="btn" style="padding: 8px 12px;">
+                            <option value="bell">Bell</option>
+                            <option value="chime">Chime</option>
+                            <option value="gong">Gong</option>
+                            <option value="silent">Silent</option>
+                        </select>
+                        <button class="btn" id="testSoundTheme" style="padding: 6px 12px; font-size: 0.8rem;">Test</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Interval Sounds</span>
+                    </div>
+                    <div class="toggle" id="intervalToggle"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Interval Duration</span>
+                    </div>
+                    <select id="intervalDuration" class="btn" style="padding: 8px 12px;">
+                        <option value="0">Off</option>
+                        <option value="30">30 seconds</option>
+                        <option value="60">1 minute</option>
+                        <option value="120">2 minutes</option>
+                        <option value="300">5 minutes</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Interval Volume</span>
+                    </div>
+                    <input type="range" id="intervalVolumeSlider" min="0" max="100" value="20">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span>Interval Sound</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="intervalSoundType" class="btn" style="padding: 8px 12px;">
+                            <option value="click">Click</option>
+                            <option value="tick">Tick</option>
+                            <option value="bell">Bell</option>
+                            <option value="wood">Wood</option>
+                        </select>
+                        <button class="btn" id="testIntervalSound" style="padding: 6px 12px; font-size: 0.8rem;">Test</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-value" id="todayMinutes">0</div>
+                    <div class="stat-label">Today (min)</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="weekMinutes">0</div>
+                    <div class="stat-label">This Week</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalSessions">0</div>
+                    <div class="stat-label">Total Sessions</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="streakDays">0</div>
+                    <div class="stat-label">Day Streak</div>
+                </div>
+            </div>
+
+            <div class="history" id="historyContainer">
+                <h3 style="margin-bottom: 15px; color: var(--accent-light);">Recent Sessions</h3>
+                <div id="historyList"></div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+                <button class="btn" id="exportBtn">Export Data</button>
+                <button class="btn" id="importBtn">Import Data</button>
+                <button class="btn" id="clearBtn">Clear All</button>
+            </div>
+        </div>
+
+        <div class="shortcuts">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcuts-grid">
+                <div class="shortcut-item">
+                    <span class="shortcut-key">Space</span>
+                    <span>Start/Pause</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-key">R</span>
+                    <span>Reset</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-key">1-9</span>
+                    <span>Quick presets</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-key">H</span>
+                    <span>Halfway chime</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-key">B</span>
+                    <span>Breathing guide</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-key">I</span>
+                    <span>Interval sounds</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-key">E</span>
+                    <span>Export data</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Save this page for offline use • All data stored locally • No cookies or tracking</p>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            duration: 5 * 60 * 1000, // 5 minutes default
+            remaining: 5 * 60 * 1000,
+            elapsed: 0,
+            isRunning: false,
+            isPaused: false,
+            startTime: null,
+            pauseTime: null,
+            halfwayPlayed: false,
+            lastIntervalPlayed: 0,
+            sessions: [],
+            settings: {
+                halfwayChime: false,
+                breathingGuide: false,
+                breathDuration: 5,
+                volume: 30,
+                soundTheme: 'bell',
+                openSitMode: false,
+                intervalSounds: false,
+                intervalDuration: 0, // seconds - off by default
+                intervalVolume: 20,
+                intervalSoundType: 'click'
+            }
+        };
+
+        // Audio context for sounds
+        let audioContext = null;
+        let sessionCompletionTimeout = null;
+
+        // Elements
+        const timeDisplay = document.getElementById('timeDisplay');
+        const statusText = document.getElementById('statusText');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const customMinutes = document.getElementById('customMinutes');
+        const setCustomTime = document.getElementById('setCustomTime');
+        const halfwayToggle = document.getElementById('halfwayToggle');
+        const breathingToggle = document.getElementById('breathingToggle');
+        const breathingGuide = document.getElementById('breathingGuide');
+        const breathDurationSlider = document.getElementById('breathDurationSlider');
+        const breathDurationValue = document.getElementById('breathDurationValue');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const soundTheme = document.getElementById('soundTheme');
+        const testSoundTheme = document.getElementById('testSoundTheme');
+        const openSitBtn = document.getElementById('openSitBtn');
+        const intervalToggle = document.getElementById('intervalToggle');
+        const intervalDuration = document.getElementById('intervalDuration');
+        const intervalVolumeSlider = document.getElementById('intervalVolumeSlider');
+        const intervalSoundType = document.getElementById('intervalSoundType');
+        const testIntervalSound = document.getElementById('testIntervalSound');
+        const historyList = document.getElementById('historyList');
+        const presetMinuteButtons = Array.from(document.querySelectorAll('.preset-buttons .btn[data-minutes]'));
+        const progressRing = document.querySelector('.progress-ring-fill');
+        const circumference = 2 * Math.PI * 130;
+        const BREATH_MIN = 3;
+        const BREATH_MAX = 8;
+
+        // Initialize
+        function init() {
+            loadSettings();
+            loadSessions();
+            testSoundTheme.disabled = state.settings.soundTheme === 'silent';
+            updateDisplay();
+            updateStats();
+            updateHistory();
+            updatePresetSelection(state.settings.openSitMode ? null : Math.round(state.duration / 60000));
+            updateResetButtonLabel();
+            applyBreathDuration();
+            
+            // Set up progress ring
+            progressRing.style.strokeDasharray = circumference;
+            progressRing.style.strokeDashoffset = circumference;
+        }
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('meditationSettings');
+            if (saved) {
+                Object.assign(state.settings, JSON.parse(saved));
+                if (!state.settings.breathDuration) {
+                    state.settings.breathDuration = 5;
+                }
+                halfwayToggle.classList.toggle('active', state.settings.halfwayChime);
+                breathingToggle.classList.toggle('active', state.settings.breathingGuide);
+                volumeSlider.value = state.settings.volume;
+                soundTheme.value = state.settings.soundTheme;
+                testSoundTheme.disabled = state.settings.soundTheme === 'silent';
+                intervalToggle.classList.toggle('active', state.settings.intervalSounds);
+                intervalDuration.value = state.settings.intervalDuration;
+                intervalVolumeSlider.value = state.settings.intervalVolume;
+                intervalSoundType.value = state.settings.intervalSoundType;
+                updatePresetSelection(state.settings.openSitMode ? null : Math.round(state.duration / 60000));
+                updateResetButtonLabel();
+                applyBreathDuration();
+            }
+        }
+
+        // Save settings to localStorage
+        function saveSettings() {
+            localStorage.setItem('meditationSettings', JSON.stringify(state.settings));
+        }
+
+        // Load sessions from localStorage
+        function loadSessions() {
+            const saved = localStorage.getItem('meditationSessions');
+            if (saved) {
+                state.sessions = JSON.parse(saved);
+            }
+        }
+
+        // Save sessions to localStorage
+        function saveSessions() {
+            localStorage.setItem('meditationSessions', JSON.stringify(state.sessions));
+        }
+
+        function recordSession(durationMs, mode) {
+            if (!durationMs || durationMs < 60000) return;
+
+            const minutes = Math.max(1, Math.round(durationMs / 60000));
+            const session = {
+                timestamp: Date.now(),
+                duration: minutes
+            };
+
+            if (mode) {
+                session.mode = mode;
+            }
+
+            state.sessions.push(session);
+            saveSessions();
+            updateStats();
+            updateHistory();
+        }
+
+        // Initialize audio context with proper suspended state handling
+        async function initAudio() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // Handle suspended audio context (required by modern browsers)
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+
+                return true;
+            } catch (error) {
+                console.warn('Web Audio API not available:', error);
+                return false;
+            }
+        }
+
+        // Generate simple beep sound as data URL for fallback
+        function generateBeepDataURL(frequency = 440, duration = 0.5, sampleRate = 22050) {
+            const numSamples = Math.floor(sampleRate * duration);
+            const buffer = new ArrayBuffer(44 + numSamples * 2);
+            const view = new DataView(buffer);
+
+            // WAV header
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + numSamples * 2, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(36, 'data');
+            view.setUint32(40, numSamples * 2, true);
+
+            // Generate sine wave samples
+            for (let i = 0; i < numSamples; i++) {
+                const sample = Math.sin(2 * Math.PI * frequency * i / sampleRate);
+                const fade = i < sampleRate * 0.01 ? i / (sampleRate * 0.01) :
+                           i > numSamples - sampleRate * 0.01 ? (numSamples - i) / (sampleRate * 0.01) : 1;
+                view.setInt16(44 + i * 2, sample * fade * 0x7FFF, true);
+            }
+
+            const blob = new Blob([buffer], { type: 'audio/wav' });
+            return URL.createObjectURL(blob);
+        }
+
+        // Fallback audio using HTML5 Audio
+        function playFallbackSound(type = 'end') {
+            try {
+                let frequency, duration;
+
+                if (type === 'interval') {
+                    switch (state.settings.intervalSoundType) {
+                        case 'click': frequency = 800; duration = 0.08; break;
+                        case 'tick': frequency = 1200; duration = 0.08; break;
+                        case 'bell': frequency = 1760; duration = 0.15; break;
+                        case 'wood': frequency = 200; duration = 0.15; break;
+                        default: frequency = 800; duration = 0.08;
+                    }
+                } else if (type === 'halfway') {
+                    frequency = 523; duration = 0.5;
+                } else {
+                    frequency = 440; duration = 1.0;
+                }
+
+                const audio = new Audio(generateBeepDataURL(frequency, duration));
+                audio.volume = type === 'interval' ?
+                    (state.settings.intervalVolume / 100) * 0.3 :
+                    (state.settings.volume / 100) * 0.8;
+
+                audio.play().catch(e => console.warn('Fallback audio failed:', e));
+
+                // Clean up URL after playing
+                audio.addEventListener('ended', () => {
+                    URL.revokeObjectURL(audio.src);
+                });
+
+                return true;
+            } catch (error) {
+                console.warn('Fallback audio generation failed:', error);
+                return false;
+            }
+        }
+
+        // Play sound with fallback
+        async function playSound(type = 'end') {
+            if (state.settings.soundTheme === 'silent') return;
+
+            const audioInitialized = await initAudio();
+            if (!audioInitialized) {
+                playFallbackSound(type);
+                return;
+            }
+            const normalizedType = type.startsWith('end') ? 'end' : type;
+            const volume = state.settings.volume / 100;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            switch (state.settings.soundTheme) {
+                case 'bell':
+                    if (normalizedType === 'halfway') {
+                        oscillator.frequency.value = 523.25; // C5
+                        gainNode.gain.value = volume * 0.5;
+                    } else {
+                        oscillator.frequency.value = 440; // A4
+                        gainNode.gain.value = volume;
+                    }
+                    oscillator.type = 'sine';
+                    break;
+                case 'chime':
+                    if (normalizedType === 'halfway') {
+                        oscillator.frequency.value = 659.25; // E5
+                        gainNode.gain.value = volume * 0.4;
+                    } else {
+                        oscillator.frequency.value = 523.25; // C5
+                        gainNode.gain.value = volume * 0.8;
+                    }
+                    oscillator.type = 'triangle';
+                    break;
+                case 'gong':
+                    if (normalizedType === 'halfway') {
+                        oscillator.frequency.value = 196; // G3
+                        gainNode.gain.value = volume * 0.6;
+                    } else {
+                        oscillator.frequency.value = 130.81; // C3
+                        gainNode.gain.value = volume;
+                    }
+                    oscillator.type = 'sawtooth';
+                    break;
+                default:
+                    oscillator.frequency.value = 440;
+                    gainNode.gain.value = volume;
+                    oscillator.type = 'sine';
+            }
+
+            // Slightly reduce the follow-up chimes so the echo feels natural
+            if (type === 'end-2') {
+                gainNode.gain.value *= 0.7;
+            } else if (type === 'end-3') {
+                gainNode.gain.value *= 0.5;
+            }
+
+            const targetGain = Math.max(0.0001, gainNode.gain.value);
+
+            // Envelope
+            const now = audioContext.currentTime;
+            const duration = normalizedType === 'halfway' ? 0.5 : 1.5;
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(0.0001, now);
+            gainNode.gain.linearRampToValueAtTime(targetGain, now + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+            
+            // Play multiple times for end sound
+            if (type === 'end') {
+                setTimeout(() => playSound('end-2'), 300);
+                setTimeout(() => playSound('end-3'), 600);
+            }
+        }
+
+        // Play interval sound with fallback
+        async function playIntervalSound({ force = false } = {}) {
+            if (!force) {
+                if (!state.settings.intervalSounds || state.settings.intervalVolume === 0) {
+                    return 'skipped';
+                }
+            } else if (state.settings.intervalVolume === 0) {
+                // Respect muted interval volume even when forcing a test
+                return 'skipped';
+            }
+
+            const audioInitialized = await initAudio();
+            if (!audioInitialized) {
+                playFallbackSound('interval');
+                return 'fallback';
+            }
+            const volume = state.settings.intervalVolume / 100;
+            const baseGain = Math.max(0.25, Math.min(1.2, volume * 1.4));
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            let gainMultiplier = 1;
+            switch (state.settings.intervalSoundType) {
+                case 'click':
+                    oscillator.frequency.value = 800; // High pitch click
+                    oscillator.type = 'square';
+                    gainMultiplier = 1;
+                    break;
+                case 'tick':
+                    oscillator.frequency.value = 1200; // Higher pitch tick
+                    oscillator.type = 'sine';
+                    gainMultiplier = 1;
+                    break;
+                case 'bell':
+                    oscillator.frequency.value = 1760; // A6 - subtle high bell
+                    oscillator.type = 'sine';
+                    gainMultiplier = 1;
+                    break;
+                case 'wood':
+                    oscillator.frequency.value = 200; // Low wood block sound
+                    oscillator.type = 'triangle';
+                    gainMultiplier = 1.4;
+                    break;
+                default:
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'sine';
+                    gainMultiplier = 0.9;
+            }
+
+            gainNode.gain.value = Math.min(0.98, baseGain * gainMultiplier);
+
+            const targetGain = Math.max(0.0001, gainNode.gain.value);
+
+            // Short, subtle envelope for interval sounds
+            const now = audioContext.currentTime;
+            const duration = state.settings.intervalSoundType === 'wood' ? 0.15 : 0.08;
+
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(0.0001, now);
+            gainNode.gain.linearRampToValueAtTime(targetGain, now + 0.005);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+
+            return 'played';
+        }
+
+        // Update timer display
+        function updateDisplay() {
+            if (state.settings.openSitMode) {
+                const elapsedSeconds = Math.floor((state.elapsed || 0) / 1000);
+                const hours = Math.floor(elapsedSeconds / 3600);
+                const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+                const seconds = elapsedSeconds % 60;
+                if (hours > 0) {
+                    timeDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                } else {
+                    timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+                progressRing.style.strokeDashoffset = circumference;
+                return;
+            }
+
+            const totalSeconds = Math.max(0, Math.ceil(state.remaining / 1000));
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update progress ring
+            const progress = 1 - (state.remaining / state.duration);
+            const offset = circumference - (progress * circumference);
+            progressRing.style.strokeDashoffset = offset;
+        }
+
+        function updatePresetSelection(selectedMinutes = null) {
+            presetMinuteButtons.forEach(btn => {
+                const btnMinutes = parseInt(btn.dataset.minutes, 10);
+                btn.classList.toggle('active', selectedMinutes !== null && btnMinutes === selectedMinutes);
+            });
+            openSitBtn.classList.toggle('active', selectedMinutes === null && state.settings.openSitMode);
+        }
+
+        function updateResetButtonLabel() {
+            resetBtn.textContent = state.settings.openSitMode ? 'Done' : 'Reset';
+        }
+
+        function applyBreathDuration() {
+            let seconds = parseInt(state.settings.breathDuration, 10) || 5;
+            seconds = Math.min(BREATH_MAX, Math.max(BREATH_MIN, seconds));
+            state.settings.breathDuration = seconds;
+            if (breathDurationSlider) {
+                breathDurationSlider.min = String(BREATH_MIN);
+                breathDurationSlider.max = String(BREATH_MAX);
+                breathDurationSlider.value = String(seconds);
+            }
+            if (breathDurationValue) {
+                breathDurationValue.textContent = `${seconds}s`;
+            }
+            document.documentElement.style.setProperty('--breath-cycle', `${seconds * 4}s`);
+        }
+
+        // Start timer
+        async function start() {
+            // Initialize audio on first user interaction
+            await initAudio();
+
+            if (sessionCompletionTimeout) {
+                clearTimeout(sessionCompletionTimeout);
+                sessionCompletionTimeout = null;
+            }
+
+            state.isRunning = true;
+            state.isPaused = false;
+            state.startTime = Date.now();
+            state.halfwayPlayed = false;
+            state.lastIntervalPlayed = 0;
+            state.elapsed = 0;
+            state.remaining = state.settings.openSitMode ? Number.POSITIVE_INFINITY : state.duration;
+            
+            startBtn.style.display = 'none';
+            pauseBtn.style.display = 'block';
+            resumeBtn.style.display = 'none';
+            statusText.textContent = 'Meditating';
+            
+            if (state.settings.breathingGuide) {
+                breathingGuide.classList.add('active');
+            }
+            
+            updateDisplay();
+            tick();
+        }
+
+        // Pause timer
+        function pause() {
+            state.isPaused = true;
+            state.pauseTime = Date.now();
+            
+            pauseBtn.style.display = 'none';
+            resumeBtn.style.display = 'block';
+            statusText.textContent = 'Paused';
+            
+            breathingGuide.classList.remove('active');
+        }
+
+        // Resume timer
+        function resume() {
+            state.isPaused = false;
+            const pauseDuration = Date.now() - state.pauseTime;
+            state.startTime += pauseDuration;
+            
+            pauseBtn.style.display = 'block';
+            resumeBtn.style.display = 'none';
+            statusText.textContent = 'Meditating';
+            
+            if (state.settings.breathingGuide) {
+                breathingGuide.classList.add('active');
+            }
+            
+            tick();
+        }
+
+        // Reset timer
+        function reset() {
+            const wasRunning = state.isRunning;
+            const wasOpenSit = state.settings.openSitMode;
+
+            if (sessionCompletionTimeout) {
+                clearTimeout(sessionCompletionTimeout);
+                sessionCompletionTimeout = null;
+            }
+
+            if (wasRunning && wasOpenSit) {
+                if (state.elapsed >= 60000) {
+                    playSound('end');
+                    recordSession(state.elapsed, 'open');
+                }
+            }
+
+            state.isRunning = false;
+            state.isPaused = false;
+            state.startTime = null;
+            state.pauseTime = null;
+            state.elapsed = 0;
+            state.remaining = state.duration;
+            state.halfwayPlayed = false;
+            state.lastIntervalPlayed = 0;
+            
+            startBtn.style.display = 'block';
+            pauseBtn.style.display = 'none';
+            resumeBtn.style.display = 'none';
+            statusText.textContent = 'Ready';
+            
+            breathingGuide.classList.remove('active');
+            
+            updateDisplay();
+            updateResetButtonLabel();
+        }
+
+        // Timer tick
+        function tick() {
+            if (!state.isRunning || state.isPaused) return;
+            
+            const elapsed = Date.now() - state.startTime;
+            state.elapsed = elapsed;
+
+            if (!state.settings.openSitMode) {
+                state.remaining = Math.max(0, state.duration - elapsed);
+            }
+            
+            // Check halfway point
+            if (!state.settings.openSitMode && state.settings.halfwayChime && !state.halfwayPlayed && state.remaining <= state.duration / 2) {
+                state.halfwayPlayed = true;
+                playSound('halfway');
+            }
+
+            // Check interval sounds
+            if (state.settings.intervalSounds && state.settings.intervalDuration > 0) {
+                const intervalMs = state.settings.intervalDuration * 1000;
+                const currentInterval = Math.floor(elapsed / intervalMs);
+
+                // Only play if we've reached a new interval and avoid conflicts with other chimes
+                if (currentInterval > state.lastIntervalPlayed && currentInterval > 0) {
+                    const timeUntilHalfway = state.settings.openSitMode ? Number.POSITIVE_INFINITY : Math.abs(state.remaining - state.duration / 2);
+                    const timeUntilEnd = state.settings.openSitMode ? Number.POSITIVE_INFINITY : state.remaining;
+
+                    // Don't play if too close to halfway chime (within 2 seconds) or end (within 5 seconds)
+                    if (timeUntilHalfway > 2000 && timeUntilEnd > 5000) {
+                        state.lastIntervalPlayed = currentInterval;
+                        playIntervalSound();
+                    }
+                }
+            }
+
+            updateDisplay();
+            
+            if (!state.settings.openSitMode && state.remaining <= 0) {
+                complete();
+            } else {
+                requestAnimationFrame(tick);
+            }
+        }
+
+        // Complete session
+        function complete() {
+            state.isRunning = false;
+
+            // Play completion sound
+            playSound('end');
+
+            recordSession(state.duration, 'countdown');
+
+            // Update UI
+            statusText.textContent = 'Complete!';
+            startBtn.style.display = 'block';
+            pauseBtn.style.display = 'none';
+            breathingGuide.classList.remove('active');
+
+            // Reset after delay
+            sessionCompletionTimeout = setTimeout(() => {
+                reset();
+            }, 3000);
+        }
+
+        // Set duration
+        function setDuration(minutes) {
+            if (state.settings.openSitMode) {
+                state.settings.openSitMode = false;
+                saveSettings();
+            }
+
+            state.duration = minutes * 60 * 1000;
+            state.remaining = state.duration;
+            customMinutes.value = minutes;
+            updateDisplay();
+
+            updatePresetSelection(minutes);
+            updateResetButtonLabel();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekStart = new Date(today);
+            weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // Monday
+            
+            let todayMinutes = 0;
+            let weekMinutes = 0;
+            let streak = calculateStreak();
+            
+            state.sessions.forEach(session => {
+                const sessionDate = new Date(session.timestamp);
+                if (sessionDate >= today) {
+                    todayMinutes += session.duration;
+                }
+                if (sessionDate >= weekStart) {
+                    weekMinutes += session.duration;
+                }
+            });
+            
+            document.getElementById('todayMinutes').textContent = todayMinutes;
+            document.getElementById('weekMinutes').textContent = weekMinutes;
+            document.getElementById('totalSessions').textContent = state.sessions.length;
+            document.getElementById('streakDays').textContent = streak;
+        }
+
+        // Calculate streak
+        function calculateStreak() {
+            if (state.sessions.length === 0) return 0;
+            
+            const days = new Set();
+            state.sessions.forEach(session => {
+                const date = new Date(session.timestamp);
+                const dayStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                days.add(dayStr);
+            });
+            
+            const today = new Date();
+            let streak = 0;
+            let checkDate = new Date(today);
+            
+            while (true) {
+                const dayStr = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
+                if (days.has(dayStr)) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else if (streak === 0 && checkDate.getDate() === today.getDate()) {
+                    // Today hasn't been done yet, check yesterday
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            
+            return streak;
+        }
+
+        // Update history
+        function updateHistory() {
+            historyList.innerHTML = '';
+
+            if (state.sessions.length === 0) {
+                historyList.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No sessions yet</div>';
+                return;
+            }
+
+            const maxItems = Math.min(10, state.sessions.length);
+
+            for (let offset = 0; offset < maxItems; offset++) {
+                const index = state.sessions.length - 1 - offset;
+                const session = state.sessions[index];
+                const date = new Date(session.timestamp);
+                const modeLabel = session.mode === 'open' ? ' • Open Sit' : '';
+
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.dataset.index = String(index);
+                item.innerHTML = `
+                    <div>${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}${modeLabel}</div>
+                    <div class="history-actions">
+                        <span>${session.duration} min</span>
+                        <div class="history-buttons">
+                            <button class="history-btn history-edit" type="button">Edit</button>
+                            <button class="history-btn history-delete" type="button">Delete</button>
+                        </div>
+                    </div>
+                `;
+                historyList.appendChild(item);
+            }
+        }
+
+        // Export data
+        function exportData() {
+            const data = {
+                sessions: state.sessions,
+                settings: state.settings,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meditation_data_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Import data
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.sessions) {
+                            state.sessions = data.sessions;
+                            saveSessions();
+                        }
+                        if (data.settings) {
+                            Object.assign(state.settings, data.settings);
+                            saveSettings();
+                            loadSettings();
+                        }
+                        updateStats();
+                        updateHistory();
+                        alert('Data imported successfully!');
+                    } catch (err) {
+                        alert('Error importing data. Please check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('This will delete all your meditation data. Are you sure?')) {
+                state.sessions = [];
+                saveSessions();
+                updateStats();
+                updateHistory();
+            }
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', start);
+        pauseBtn.addEventListener('click', pause);
+        resumeBtn.addEventListener('click', resume);
+        resetBtn.addEventListener('click', reset);
+
+        // Preset buttons
+        document.querySelectorAll('[data-minutes]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setDuration(parseInt(btn.dataset.minutes));
+            });
+        });
+
+        openSitBtn.addEventListener('click', () => {
+            if (state.isRunning) {
+                alert('Pause or reset the current session before switching to Open Sit.');
+                return;
+            }
+
+            state.settings.openSitMode = true;
+            saveSettings();
+
+            state.elapsed = 0;
+            state.remaining = state.duration;
+            updatePresetSelection(null);
+            statusText.textContent = 'Ready';
+            updateDisplay();
+            updateResetButtonLabel();
+        });
+
+        // Custom time
+        setCustomTime.addEventListener('click', () => {
+            const minutes = Math.max(1, Math.min(180, parseInt(customMinutes.value) || 5));
+            setDuration(minutes);
+        });
+
+        customMinutes.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                setCustomTime.click();
+            }
+        });
+
+        // Settings
+        halfwayToggle.addEventListener('click', () => {
+            state.settings.halfwayChime = !state.settings.halfwayChime;
+            halfwayToggle.classList.toggle('active');
+            saveSettings();
+        });
+
+        breathingToggle.addEventListener('click', () => {
+            state.settings.breathingGuide = !state.settings.breathingGuide;
+            breathingToggle.classList.toggle('active');
+            saveSettings();
+            
+            if (state.isRunning && !state.isPaused) {
+                breathingGuide.classList.toggle('active', state.settings.breathingGuide);
+            }
+        });
+
+        if (breathDurationSlider) {
+            breathDurationSlider.addEventListener('input', () => {
+                let seconds = parseInt(breathDurationSlider.value, 10);
+                seconds = Math.min(BREATH_MAX, Math.max(BREATH_MIN, seconds));
+                state.settings.breathDuration = seconds;
+                applyBreathDuration();
+                saveSettings();
+            });
+        }
+
+        volumeSlider.addEventListener('input', () => {
+            state.settings.volume = parseInt(volumeSlider.value);
+            saveSettings();
+        });
+
+        soundTheme.addEventListener('change', () => {
+            state.settings.soundTheme = soundTheme.value;
+            testSoundTheme.disabled = state.settings.soundTheme === 'silent';
+            saveSettings();
+        });
+
+        testSoundTheme.addEventListener('click', async () => {
+            if (state.settings.soundTheme === 'silent') {
+                alert('Sound theme is set to Silent. Choose another option to hear the chime.');
+                return;
+            }
+            await playSound('preview');
+        });
+
+        // Interval sound settings
+        intervalToggle.addEventListener('click', () => {
+            state.settings.intervalSounds = !state.settings.intervalSounds;
+            intervalToggle.classList.toggle('active');
+            saveSettings();
+        });
+
+        intervalDuration.addEventListener('change', () => {
+            state.settings.intervalDuration = parseInt(intervalDuration.value);
+            // If duration is set to 0, disable interval sounds
+            if (state.settings.intervalDuration === 0) {
+                state.settings.intervalSounds = false;
+                intervalToggle.classList.remove('active');
+            }
+            saveSettings();
+        });
+
+        intervalVolumeSlider.addEventListener('input', () => {
+            state.settings.intervalVolume = parseInt(intervalVolumeSlider.value);
+            saveSettings();
+        });
+
+        intervalSoundType.addEventListener('change', () => {
+            state.settings.intervalSoundType = intervalSoundType.value;
+            saveSettings();
+        });
+
+        // Test interval sound button
+        testIntervalSound.addEventListener('click', async () => {
+            const result = await playIntervalSound({ force: true });
+
+            if (result === 'skipped') {
+                if (state.settings.intervalVolume === 0) {
+                    alert('Interval volume is set to 0%. Increase the slider to hear the test tone.');
+                } else {
+                    // Should not happen in normal flow, but provide a fallback just in case
+                    playFallbackSound('interval');
+                }
+            }
+        });
+
+        // Data management
+        document.getElementById('exportBtn').addEventListener('click', exportData);
+        document.getElementById('importBtn').addEventListener('click', importData);
+        document.getElementById('clearBtn').addEventListener('click', clearAllData);
+
+        historyList.addEventListener('click', (event) => {
+            const button = event.target.closest('.history-btn');
+            if (!button) return;
+
+            const item = button.closest('.history-item');
+            if (!item) return;
+
+            const index = parseInt(item.dataset.index, 10);
+            if (Number.isNaN(index)) return;
+
+            if (button.classList.contains('history-delete')) {
+                if (!confirm('Delete this session?')) return;
+                state.sessions.splice(index, 1);
+                saveSessions();
+                updateStats();
+                updateHistory();
+            } else if (button.classList.contains('history-edit')) {
+                const current = state.sessions[index];
+                const input = prompt('Enter session duration in minutes:', current.duration);
+                if (input === null) return;
+
+                const parsed = parseFloat(input);
+                if (!Number.isFinite(parsed) || parsed <= 0) {
+                    alert('Please enter a positive number.');
+                    return;
+                }
+
+                const newMinutes = Math.min(600, Math.round(parsed));
+                current.duration = newMinutes;
+                saveSessions();
+                updateStats();
+                updateHistory();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger shortcuts when typing in inputs
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            
+            switch(e.key.toLowerCase()) {
+                case ' ':
+                    e.preventDefault();
+                    if (!state.isRunning) {
+                        start();
+                    } else if (state.isPaused) {
+                        resume();
+                    } else {
+                        pause();
+                    }
+                    break;
+                case 'r':
+                    reset();
+                    break;
+                case 'h':
+                    halfwayToggle.click();
+                    break;
+                case 'b':
+                    breathingToggle.click();
+                    break;
+                case 'i':
+                    intervalToggle.click();
+                    break;
+                case 'e':
+                    exportData();
+                    break;
+                case '1':
+                    setDuration(1);
+                    break;
+                case '2':
+                    setDuration(2);
+                    break;
+                case '3':
+                    setDuration(3);
+                    break;
+                case '4':
+                    setDuration(4);
+                    break;
+                case '5':
+                    setDuration(5);
+                    break;
+                case '6':
+                    setDuration(10);
+                    break;
+                case '7':
+                    setDuration(15);
+                    break;
+                case '8':
+                    setDuration(20);
+                    break;
+                case '9':
+                    setDuration(30);
+                    break;
+            }
+        });
+
+        // Prevent space bar from scrolling
+        window.addEventListener('keydown', (e) => {
+            if (e.key === ' ' && e.target === document.body) {
+                e.preventDefault();
+            }
+        });
+
+        // Initialize on load
+        init();
+
+        // Update display every second when not running
+        setInterval(() => {
+            if (!state.isRunning) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                if (statusText.textContent === 'Ready') {
+                    statusText.textContent = `Ready • ${timeString}`;
+                }
+            }
+        }, 1000);
+
+        // Service worker for offline support (optional enhancement)
+        if ('serviceWorker' in navigator) {
+            // This would require a separate service worker file in production
+            // For now, the app works offline as a saved HTML file
+        }
+
+        // Page visibility API to handle tab switching
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && state.isRunning && !state.isPaused) {
+                // Recalculate remaining time when tab becomes visible
+                const elapsed = Date.now() - state.startTime;
+                state.remaining = Math.max(0, state.duration - elapsed);
+                if (state.remaining <= 0) {
+                    complete();
+                }
+            }
+        });
+
+        // Warn before closing if timer is running
+        window.addEventListener('beforeunload', (e) => {
+            if (state.isRunning) {
+                e.preventDefault();
+                e.returnValue = 'Timer is still running. Are you sure you want to leave?';
+            }
+        });
+    </script>
+</body>
+</html>
