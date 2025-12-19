@@ -649,8 +649,9 @@
                 <div id="historyList"></div>
             </div>
 
-            <div style="display: flex; gap: 12px; margin-top: 20px;">
-                <button class="btn" id="exportBtn">Export Data</button>
+            <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+                <button class="btn" id="exportBtn">Export JSON</button>
+                <button class="btn" id="exportCsvBtn">Export CSV</button>
                 <button class="btn" id="importBtn">Import Data</button>
                 <button class="btn" id="clearBtn">Clear All</button>
             </div>
@@ -1407,19 +1408,43 @@
             }
         }
 
-        // Export data
+        // Export data as JSON
         function exportData() {
             const data = {
                 sessions: state.sessions,
                 settings: state.settings,
                 exportDate: new Date().toISOString()
             };
-            
+
             const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `meditation_data_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Export data as CSV
+        function exportCsv() {
+            const header = ['timestamp_iso', 'date', 'time', 'duration_minutes', 'mode'];
+            const lines = [header.join(',')];
+
+            state.sessions.forEach((session) => {
+                const date = new Date(session.timestamp);
+                const iso = date.toISOString();
+                const dateStr = date.toLocaleDateString();
+                const timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                const duration = session.duration;
+                const mode = session.mode || 'countdown';
+                lines.push([iso, dateStr, timeStr, duration, mode].join(','));
+            });
+
+            const blob = new Blob([lines.join('\n')], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meditation_sessions_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -1599,6 +1624,7 @@
 
         // Data management
         document.getElementById('exportBtn').addEventListener('click', exportData);
+        document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
         document.getElementById('importBtn').addEventListener('click', importData);
         document.getElementById('clearBtn').addEventListener('click', clearAllData);
 
