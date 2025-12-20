@@ -262,6 +262,8 @@
             transition: background-color 0.15s;
             user-select: none;
             position: relative;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .cell:hover:not(.revealed) {
@@ -1118,14 +1120,33 @@
                     }, 500);
                 }, { passive: true });
 
-                gameBoard.addEventListener('touchend', () => {
+                gameBoard.addEventListener('touchend', (e) => {
                     if (this.longPressTimer) {
                         clearTimeout(this.longPressTimer);
                         this.longPressTimer = null;
                     }
                     // Restore face
                     if (!this.gameOver) faceBtn.textContent = '😊';
-                }, { passive: true });
+
+                    // Handle tap directly (don't wait for click event)
+                    if (!this.longPressTriggered && !this.gameOver) {
+                        const touch = e.changedTouches[0];
+                        const cell = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.cell');
+                        if (cell) {
+                            const row = parseInt(cell.dataset.row);
+                            const col = parseInt(cell.dataset.col);
+                            const cellData = this.board[row][col];
+                            if (!cellData.isFlagged && !cellData.isQuestion && !cellData.isRevealed) {
+                                if (!this.gameStarted) this.startGame(row, col);
+                                this.playSound('click');
+                                this.revealCell(row, col);
+                                this.saveGameState();
+                                e.preventDefault();
+                            }
+                        }
+                    }
+                    this.longPressTriggered = false;
+                }, { passive: false });
 
                 gameBoard.addEventListener('touchmove', () => {
                     if (this.longPressTimer) {
