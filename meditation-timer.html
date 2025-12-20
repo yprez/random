@@ -808,7 +808,8 @@
                 intervalSounds: false,
                 intervalDuration: 0, // seconds - off by default
                 intervalVolume: 20,
-                intervalSoundType: 'click'
+                intervalSoundType: 'click',
+                selectedDuration: 5 // minutes
             }
         };
 
@@ -870,6 +871,11 @@
                 Object.assign(state.settings, JSON.parse(saved));
                 if (!state.settings.breathDuration) {
                     state.settings.breathDuration = 5;
+                }
+                if (state.settings.selectedDuration) {
+                    state.duration = state.settings.selectedDuration * 60 * 1000;
+                    state.remaining = state.duration;
+                    customMinutes.value = state.settings.selectedDuration;
                 }
                 halfwayToggle.classList.toggle('active', state.settings.halfwayChime);
                 breathingToggle.classList.toggle('active', state.settings.breathingGuide);
@@ -1393,12 +1399,13 @@
         function setDuration(minutes) {
             if (state.settings.openSitMode) {
                 state.settings.openSitMode = false;
-                saveSettings();
             }
 
             state.duration = minutes * 60 * 1000;
             state.remaining = state.duration;
+            state.settings.selectedDuration = minutes;
             customMinutes.value = minutes;
+            saveSettings();
             updateDisplay();
 
             updatePresetSelection(minutes);
