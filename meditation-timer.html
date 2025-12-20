@@ -89,6 +89,8 @@
         }
 
         .progress-ring {
+            width: 100%;
+            height: 100%;
             transform: rotate(-90deg);
         }
 
@@ -367,8 +369,26 @@
         .footer {
             text-align: center;
             margin-top: 30px;
+            padding: 20px;
             color: var(--text-secondary);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .footer a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer a:hover {
+            color: var(--text-primary);
+        }
+
+        .footer p {
+            margin: 6px 0;
         }
 
         .shortcuts {
@@ -482,51 +502,75 @@
             .header h1 { font-size: 2rem; }
             .timer-display { width: 240px; height: 240px; }
             .timer-text .time { font-size: 2.5rem; }
-            .preset-buttons { grid-template-columns: repeat(2, 1fr); }
+            .preset-buttons { grid-template-columns: repeat(3, 1fr); }
             .stats-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 380px) {
-            body { padding: 10px; }
-            .header { margin-bottom: 20px; }
-            .header h1 { font-size: 1.5rem; letter-spacing: 1px; }
-            .header p { font-size: 0.8rem; }
-            .timer-card { padding: 20px 15px; border-radius: 16px; }
+            body { padding: 8px; }
+            .header { margin-bottom: 15px; }
+            .header h1 { font-size: 1.4rem; letter-spacing: 1px; }
+            .header p { font-size: 0.75rem; }
+            .timer-card { padding: 15px 12px; border-radius: 16px; }
             .timer-display {
-                width: 200px;
-                height: 200px;
-                margin-bottom: 25px;
+                width: 180px;
+                height: 180px;
+                margin-bottom: 20px;
             }
-            .timer-display .progress-ring {
-                transform: rotate(-90deg) scale(0.714);
-                transform-origin: center center;
+            .timer-text .time { font-size: 1.8rem; }
+            .timer-text .status { font-size: 0.7rem; margin-top: 5px; }
+            .preset-buttons {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                margin-bottom: 15px;
             }
-            .timer-text .time { font-size: 2rem; }
-            .timer-text .status { font-size: 0.75rem; }
-            .preset-buttons { gap: 8px; margin-bottom: 20px; }
-            .preset-buttons .btn { padding: 10px 12px; font-size: 0.85rem; }
-            .custom-time { flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+            .preset-buttons .btn {
+                padding: 8px 4px;
+                font-size: 0.75rem;
+                border-radius: 8px;
+            }
+            .custom-time {
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 12px;
+                font-size: 0.85rem;
+            }
             .custom-time label { width: 100%; }
-            .custom-time input { width: 70px; padding: 8px 10px; }
-            .controls { gap: 8px; margin-bottom: 20px; }
-            .controls .btn { min-width: 90px; padding: 10px 15px; }
-            .settings { padding: 15px; gap: 12px; margin-bottom: 20px; }
-            .setting-row { flex-wrap: wrap; gap: 10px; }
-            .setting-label { font-size: 0.85rem; }
-            input[type="range"] { width: 100px; }
-            .stats-card { padding: 20px 15px; border-radius: 16px; }
-            .stat { padding: 12px 10px; }
-            .stat-value { font-size: 1.5rem; }
-            .stat-label { font-size: 0.75rem; }
-            .history { padding: 12px; }
-            .history-item { flex-wrap: wrap; gap: 5px; font-size: 0.8rem; }
-            .history-actions { width: 100%; justify-content: space-between; }
-            .shortcuts { padding: 15px; border-radius: 12px; }
-            .shortcuts h3 { font-size: 1rem; margin-bottom: 10px; }
-            .shortcuts-grid { grid-template-columns: 1fr; gap: 8px; }
-            .shortcut-item { font-size: 0.8rem; }
-            .footer { margin-top: 20px; font-size: 0.75rem; }
-            .breathing-guide { width: 100px; height: 100px; }
+            .custom-time input { width: 60px; padding: 6px 8px; font-size: 0.9rem; }
+            .custom-time .btn { padding: 6px 12px; font-size: 0.85rem; }
+            .controls { gap: 6px; margin-bottom: 15px; }
+            .controls .btn { min-width: 80px; padding: 10px 12px; font-size: 0.9rem; }
+            .settings { padding: 12px; gap: 10px; margin-bottom: 15px; }
+            .setting-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .setting-label { font-size: 0.8rem; min-width: 100px; }
+            input[type="range"] { width: 80px; }
+            .settings select.btn { padding: 6px 8px; font-size: 0.8rem; }
+            .settings .btn { padding: 4px 8px; font-size: 0.75rem; }
+            .stats-card { padding: 15px 12px; border-radius: 16px; }
+            .stats-grid { gap: 10px; }
+            .stat { padding: 10px 8px; }
+            .stat-value { font-size: 1.4rem; }
+            .stat-label { font-size: 0.7rem; }
+            .history { padding: 10px; max-height: 150px; }
+            .history h3 { font-size: 0.9rem; }
+            .history-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                font-size: 0.75rem;
+                padding: 6px 0;
+            }
+            .history-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .history-btn { padding: 3px 8px; font-size: 0.7rem; }
+            .shortcuts { display: none; }
+            .footer { margin-top: 15px; font-size: 0.7rem; }
+            .breathing-guide { width: 80px; height: 80px; }
         }
     </style>
 </head>
@@ -539,7 +583,7 @@
 
         <div class="timer-card">
             <div class="timer-display">
-                <svg width="280" height="280" class="progress-ring">
+                <svg viewBox="0 0 280 280" class="progress-ring">
                     <defs>
                         <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#a78bfa" />
@@ -735,7 +779,9 @@
         </div>
 
         <div class="footer">
-            <p>Save this page for offline use • All data stored locally • No cookies or tracking</p>
+            <p>All data stored locally • No cookies or tracking</p>
+            <p><a href="meditation-timer.html" download>Save this page for offline use</a></p>
+            <p>by <a href="https://yprez.com">yprez.com</a></p>
         </div>
     </div>
 
