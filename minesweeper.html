@@ -12,7 +12,7 @@
             --text-muted: #555555;
             --cell-bg: #bcbbb8;
             --cell-hover: #acaba8;
-            --cell-revealed: #cccbc8;
+            --cell-revealed: #dfdedd;
             --cell-border: #a4a3a0;
             --mine-bg: #d4a0a0;
             --btn-bg: #1a1a1a;
@@ -459,6 +459,56 @@
         @keyframes confetti-fall {
             0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
             100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        @media (max-width: 500px) {
+            .card { padding: 16px; }
+
+            .difficulty-tabs {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+            }
+
+            .tab {
+                padding: 6px 8px;
+                font-size: 11px;
+            }
+
+            .bottom-controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .high-scores {
+                margin-top: 12px;
+                padding-top: 12px;
+            }
+
+            .high-scores-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+                font-size: 11px;
+            }
+
+            .high-score-item {
+                padding: 4px 8px;
+                background: var(--cell-bg);
+                border-radius: 4px;
+            }
+
+            .keyboard-hints { display: none; }
+
+            .cell { width: 24px; height: 24px; font-size: 11px; }
+            .game-board { gap: 1px; }
+        }
+
+        @media (max-width: 360px) {
+            .card { padding: 12px; }
+            .cell { width: 20px; height: 20px; font-size: 10px; }
+            .tab { padding: 5px 6px; font-size: 10px; }
+            .stat-box { padding: 3px 8px; font-size: 14px; min-width: 50px; }
+            .face-btn { font-size: 20px; padding: 3px 8px; }
         }
     </style>
 </head>
