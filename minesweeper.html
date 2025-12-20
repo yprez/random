@@ -731,10 +731,13 @@
 
             loadTheme() {
                 const urlParams = new URLSearchParams(window.location.search);
-                const modeParam = urlParams.get('theme');
-                const theme = (modeParam === 'dark' || modeParam === 'light')
-                    ? modeParam
-                    : (localStorage.getItem('minesweeper-theme') || 'light');
+                const urlTheme = urlParams.get('theme');
+                const savedTheme = localStorage.getItem('minesweeper-theme');
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+                const theme = (urlTheme === 'dark' || urlTheme === 'light')
+                    ? urlTheme
+                    : (savedTheme || systemTheme);
                 document.documentElement.setAttribute('data-theme', theme);
                 this.updateThemeButton(theme);
             }
