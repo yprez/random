@@ -6,24 +6,24 @@
     <title>Minesweeper</title>
     <style>
         :root {
-            --bg-color: #f0f4f8;
-            --card-bg: #ffffff;
-            --text-color: #1a202c;
-            --text-muted: #718096;
-            --cell-bg: #e2e8f0;
-            --cell-hover: #cbd5e0;
-            --cell-revealed: #f7fafc;
-            --cell-border: #e2e8f0;
-            --mine-bg: #fed7d7;
-            --btn-bg: #1a202c;
-            --btn-text: #ffffff;
-            --btn-hover: #2d3748;
-            --tab-active: #1a202c;
-            --tab-inactive: #a0aec0;
-            --alert-bg: #fed7d7;
-            --alert-text: #c53030;
-            --success-bg: #c6f6d5;
-            --success-text: #276749;
+            --bg-color: #cccbc8;
+            --card-bg: #eae9e6;
+            --text-color: #1a1a1a;
+            --text-muted: #555555;
+            --cell-bg: #bcbbb8;
+            --cell-hover: #acaba8;
+            --cell-revealed: #cccbc8;
+            --cell-border: #a4a3a0;
+            --mine-bg: #d4a0a0;
+            --btn-bg: #1a1a1a;
+            --btn-text: #dcdbd8;
+            --btn-hover: #333333;
+            --tab-active: #1a1a1a;
+            --tab-inactive: #666666;
+            --alert-bg: #d4a0a0;
+            --alert-text: #8b0000;
+            --success-bg: #a0c4a0;
+            --success-text: #1a4d1a;
         }
 
         [data-theme="dark"] {
@@ -73,18 +73,8 @@
         }
 
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            text-align: center;
             margin-bottom: 16px;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .title-section {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
         }
 
         h1 {
@@ -94,11 +84,26 @@
             margin: 0;
         }
 
-        .stats {
-            font-size: 14px;
-            color: var(--text-muted);
+        .game-header {
             display: flex;
-            gap: 16px;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--cell-bg);
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .stat-box {
+            background: var(--bg-color);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-color);
+            min-width: 60px;
+            text-align: center;
         }
 
         .controls {
@@ -151,12 +156,12 @@
         }
 
         .face-btn {
-            padding: 12px 24px;
-            font-size: 36px;
-            background: var(--cell-bg);
+            padding: 4px 12px;
+            font-size: 24px;
+            background: var(--bg-color);
             border: none;
             cursor: pointer;
-            border-radius: 12px;
+            border-radius: 6px;
             transition: transform 0.1s, background-color 0.2s;
             line-height: 1;
         }
@@ -459,15 +464,10 @@
 </head>
 <body>
     <div class="card">
-        <div class="header">
-            <div class="title-section">
-                <h1>Minesweeper</h1>
-                <div class="stats">
-                    <span>Flags: <span id="flag-count">0</span></span>
-                    <span>Time: <span id="timer">00:00</span></span>
-                </div>
-            </div>
+        <div class="game-header">
+            <div class="stat-box"><span id="flag-count">0</span></div>
             <button class="face-btn" id="face-btn" title="New Game">😊</button>
+            <div class="stat-box"><span id="timer">00:00</span></div>
         </div>
 
         <div class="alert alert-error" id="alert-error">
