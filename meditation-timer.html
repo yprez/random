@@ -485,6 +485,49 @@
             .preset-buttons { grid-template-columns: repeat(2, 1fr); }
             .stats-grid { grid-template-columns: 1fr; }
         }
+
+        @media (max-width: 380px) {
+            body { padding: 10px; }
+            .header { margin-bottom: 20px; }
+            .header h1 { font-size: 1.5rem; letter-spacing: 1px; }
+            .header p { font-size: 0.8rem; }
+            .timer-card { padding: 20px 15px; border-radius: 16px; }
+            .timer-display {
+                width: 200px;
+                height: 200px;
+                margin-bottom: 25px;
+            }
+            .timer-display .progress-ring {
+                transform: rotate(-90deg) scale(0.714);
+                transform-origin: center center;
+            }
+            .timer-text .time { font-size: 2rem; }
+            .timer-text .status { font-size: 0.75rem; }
+            .preset-buttons { gap: 8px; margin-bottom: 20px; }
+            .preset-buttons .btn { padding: 10px 12px; font-size: 0.85rem; }
+            .custom-time { flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+            .custom-time label { width: 100%; }
+            .custom-time input { width: 70px; padding: 8px 10px; }
+            .controls { gap: 8px; margin-bottom: 20px; }
+            .controls .btn { min-width: 90px; padding: 10px 15px; }
+            .settings { padding: 15px; gap: 12px; margin-bottom: 20px; }
+            .setting-row { flex-wrap: wrap; gap: 10px; }
+            .setting-label { font-size: 0.85rem; }
+            input[type="range"] { width: 100px; }
+            .stats-card { padding: 20px 15px; border-radius: 16px; }
+            .stat { padding: 12px 10px; }
+            .stat-value { font-size: 1.5rem; }
+            .stat-label { font-size: 0.75rem; }
+            .history { padding: 12px; }
+            .history-item { flex-wrap: wrap; gap: 5px; font-size: 0.8rem; }
+            .history-actions { width: 100%; justify-content: space-between; }
+            .shortcuts { padding: 15px; border-radius: 12px; }
+            .shortcuts h3 { font-size: 1rem; margin-bottom: 10px; }
+            .shortcuts-grid { grid-template-columns: 1fr; gap: 8px; }
+            .shortcut-item { font-size: 0.8rem; }
+            .footer { margin-top: 20px; font-size: 0.75rem; }
+            .breathing-guide { width: 100px; height: 100px; }
+        }
     </style>
 </head>
 <body>
