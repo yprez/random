@@ -500,7 +500,6 @@
             .keyboard-hints { display: none; }
 
             .cell { width: 24px; height: 24px; font-size: 11px; border-radius: 2px; }
-            .game-board { gap: 0; }
         }
 
         @media (max-width: 360px) {
@@ -958,8 +957,9 @@
             renderBoard() {
                 const gameBoard = document.getElementById('game-board');
                 gameBoard.innerHTML = '';
-                gameBoard.style.gridTemplateRows = `repeat(${this.rows}, 28px)`;
-                gameBoard.style.gridTemplateColumns = `repeat(${this.cols}, 28px)`;
+                const cellSize = window.innerWidth <= 360 ? 20 : window.innerWidth <= 500 ? 24 : 28;
+                gameBoard.style.gridTemplateRows = `repeat(${this.rows}, ${cellSize}px)`;
+                gameBoard.style.gridTemplateColumns = `repeat(${this.cols}, ${cellSize}px)`;
 
                 for (let i = 0; i < this.rows; i++) {
                     for (let j = 0; j < this.cols; j++) {
@@ -1342,7 +1342,13 @@
             }
         }
 
-        new Minesweeper();
+        const game = new Minesweeper();
+        window.addEventListener('resize', () => {
+            const gameBoard = document.getElementById('game-board');
+            const cellSize = window.innerWidth <= 360 ? 20 : window.innerWidth <= 500 ? 24 : 28;
+            gameBoard.style.gridTemplateRows = `repeat(${game.rows}, ${cellSize}px)`;
+            gameBoard.style.gridTemplateColumns = `repeat(${game.cols}, ${cellSize}px)`;
+        });
     </script>
 </body>
 </html>
