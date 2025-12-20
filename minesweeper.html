@@ -730,7 +730,11 @@
             }
 
             loadTheme() {
-                const theme = localStorage.getItem('minesweeper-theme') || 'light';
+                const urlParams = new URLSearchParams(window.location.search);
+                const modeParam = urlParams.get('mode');
+                const theme = (modeParam === 'dark' || modeParam === 'light')
+                    ? modeParam
+                    : (localStorage.getItem('minesweeper-theme') || 'light');
                 document.documentElement.setAttribute('data-theme', theme);
                 this.updateThemeButton(theme);
             }
