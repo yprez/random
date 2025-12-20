@@ -731,7 +731,7 @@
 
             loadTheme() {
                 const urlParams = new URLSearchParams(window.location.search);
-                const modeParam = urlParams.get('mode');
+                const modeParam = urlParams.get('theme');
                 const theme = (modeParam === 'dark' || modeParam === 'light')
                     ? modeParam
                     : (localStorage.getItem('minesweeper-theme') || 'light');
