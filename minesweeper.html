@@ -75,8 +75,8 @@
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
+            align-items: center;
+            margin-bottom: 16px;
             flex-wrap: wrap;
             gap: 12px;
         }
@@ -151,12 +151,12 @@
         }
 
         .face-btn {
-            padding: 4px 8px;
-            font-size: 24px;
+            padding: 12px 24px;
+            font-size: 36px;
             background: var(--cell-bg);
             border: none;
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: 12px;
             transition: transform 0.1s, background-color 0.2s;
             line-height: 1;
         }
@@ -167,6 +167,22 @@
 
         .face-btn:active {
             transform: scale(0.95);
+        }
+
+        .bottom-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--cell-border);
+            flex-wrap: wrap;
+        }
+
+        .toggle-buttons {
+            display: flex;
+            gap: 4px;
         }
 
         .theme-btn {
@@ -451,17 +467,7 @@
                     <span>Time: <span id="timer">00:00</span></span>
                 </div>
             </div>
-            <div class="controls">
-                <div class="difficulty-tabs">
-                    <button class="tab active" data-difficulty="easy">Beginner</button>
-                    <button class="tab" data-difficulty="medium">Intermediate</button>
-                    <button class="tab" data-difficulty="hard">Expert</button>
-                    <button class="tab" data-difficulty="expert">Nightmare</button>
-                    <button class="tab" data-difficulty="custom">Custom</button>
-                </div>
-                <button class="face-btn" id="face-btn" title="New Game">😊</button>
-                <button class="theme-btn" id="theme-toggle" title="Toggle theme">🌙</button>
-            </div>
+            <button class="face-btn" id="face-btn" title="New Game">😊</button>
         </div>
 
         <div class="alert alert-error" id="alert-error">
@@ -487,6 +493,20 @@
         <div class="instructions">
             Left click to reveal a cell<br>
             Right click to place/remove a flag
+        </div>
+
+        <div class="bottom-controls">
+            <div class="difficulty-tabs">
+                <button class="tab active" data-difficulty="easy">Beginner</button>
+                <button class="tab" data-difficulty="medium">Intermediate</button>
+                <button class="tab" data-difficulty="hard">Expert</button>
+                <button class="tab" data-difficulty="expert">Nightmare</button>
+                <button class="tab" data-difficulty="custom">Custom</button>
+            </div>
+            <div class="toggle-buttons">
+                <button class="theme-btn" id="sound-toggle" title="Toggle sound">🔇</button>
+                <button class="theme-btn" id="theme-toggle" title="Toggle theme">🌙</button>
+            </div>
         </div>
 
         <div class="high-scores">
@@ -548,6 +568,8 @@
 
                 this.loadHighScores();
                 this.loadTheme();
+                this.loadSound();
+                this.audioContext = null;
                 this.setupEventListeners();
                 this.faceBtn = document.getElementById('face-btn');
 
@@ -674,6 +696,105 @@
 
             updateThemeButton(theme) {
                 document.getElementById('theme-toggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+
+            loadSound() {
+                this.soundEnabled = localStorage.getItem('minesweeper-sound') === 'true';
+                this.updateSoundButton();
+            }
+
+            toggleSound() {
+                this.soundEnabled = !this.soundEnabled;
+                localStorage.setItem('minesweeper-sound', this.soundEnabled);
+                this.updateSoundButton();
+                if (this.soundEnabled) {
+                    this.initAudio();
+                    this.playSound('click');
+                }
+            }
+
+            updateSoundButton() {
+                document.getElementById('sound-toggle').textContent = this.soundEnabled ? '🔊' : '🔇';
+            }
+
+            async initAudio() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                }
+            }
+
+            async playSound(type) {
+                if (!this.soundEnabled) return;
+
+                await this.initAudio();
+                if (!this.audioContext) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                const now = this.audioContext.currentTime;
+
+                switch (type) {
+                    case 'click':
+                        oscillator.frequency.value = 600;
+                        oscillator.type = 'sine';
+                        gainNode.gain.setValueAtTime(0.15, now);
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                        oscillator.start(now);
+                        oscillator.stop(now + 0.08);
+                        break;
+
+                    case 'flag':
+                        oscillator.frequency.value = 800;
+                        oscillator.type = 'triangle';
+                        gainNode.gain.setValueAtTime(0.12, now);
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                        oscillator.start(now);
+                        oscillator.stop(now + 0.1);
+                        break;
+
+                    case 'explosion':
+                        oscillator.frequency.value = 150;
+                        oscillator.type = 'sawtooth';
+                        gainNode.gain.setValueAtTime(0.3, now);
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                        oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.4);
+                        oscillator.start(now);
+                        oscillator.stop(now + 0.4);
+                        break;
+
+                    case 'win':
+                        // Play a short victory melody
+                        const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+                        notes.forEach((freq, i) => {
+                            const osc = this.audioContext.createOscillator();
+                            const gain = this.audioContext.createGain();
+                            osc.connect(gain);
+                            gain.connect(this.audioContext.destination);
+                            osc.frequency.value = freq;
+                            osc.type = 'sine';
+                            const startTime = now + i * 0.12;
+                            gain.gain.setValueAtTime(0.2, startTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+                            osc.start(startTime);
+                            osc.stop(startTime + 0.2);
+                        });
+                        return; // Don't start the main oscillator
+
+                    case 'reveal':
+                        oscillator.frequency.value = 400 + Math.random() * 100;
+                        oscillator.type = 'sine';
+                        gainNode.gain.setValueAtTime(0.08, now);
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                        oscillator.start(now);
+                        oscillator.stop(now + 0.05);
+                        break;
+                }
             }
 
             init() {
@@ -823,6 +944,9 @@
                 // Theme toggle
                 document.getElementById('theme-toggle').addEventListener('click', () => this.toggleTheme());
 
+                // Sound toggle
+                document.getElementById('sound-toggle').addEventListener('click', () => this.toggleSound());
+
                 // Face button (new game)
                 faceBtn.addEventListener('click', () => this.init());
 
@@ -872,6 +996,7 @@
                     if (cellData.isFlagged || cellData.isQuestion) return;
 
                     if (!this.gameStarted) this.startGame(row, col);
+                    this.playSound('click');
                     this.revealCell(row, col);
                     this.saveGameState();
                 });
@@ -889,6 +1014,7 @@
 
                     if (this.board[row][col].isRevealed) return;
 
+                    this.playSound('flag');
                     this.cycleFlagState(row, col);
                     this.updateCellDisplay(cell, this.board[row][col]);
                     this.updateFlagCount();
@@ -927,6 +1053,7 @@
 
                     this.longPressTimer = setTimeout(() => {
                         this.longPressTriggered = true;
+                        this.playSound('flag');
                         this.cycleFlagState(row, col);
                         this.updateCellDisplay(cell, this.board[row][col]);
                         this.updateFlagCount();
@@ -1082,6 +1209,7 @@
 
                 if (!isWin) {
                     this.isAnimating = true;
+                    this.playSound('explosion');
                     document.getElementById('alert-error').classList.add('visible');
 
                     // Reveal mines
@@ -1108,6 +1236,7 @@
                     setTimeout(() => { this.isAnimating = false; }, minePositions.length * 3 + 200);
                 } else {
                     this.isAnimating = true;
+                    this.playSound('win');
                     const isNewRecord = this.checkHighScore();
 
                     document.getElementById('success-message').textContent = isNewRecord ? 'New Record!' : 'You Win!';
