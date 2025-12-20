@@ -1059,10 +1059,11 @@
                     this.saveGameState();
                 });
 
-                // Right click
+                // Right click (skip if touch long-press is handling it)
                 gameBoard.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     if (this.gameOver) return;
+                    if (this.longPressTimer) return; // Touch is handling this
 
                     const cell = e.target.closest('.cell');
                     if (!cell) return;
