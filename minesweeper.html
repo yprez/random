@@ -63,7 +63,7 @@
             transition: background-color 0.3s;
         }
 
-        .card {
+        main.card {
             background: var(--card-bg);
             border-radius: 16px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -511,10 +511,29 @@
             .stat-box { padding: 3px 8px; font-size: 14px; min-width: 50px; }
             .face-btn { font-size: 20px; padding: 3px 8px; }
         }
+
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            padding: 8px 16px;
+            border-radius: 0 0 8px 0;
+            text-decoration: none;
+            font-weight: 600;
+            z-index: 100;
+            transition: top 0.2s;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
+    <a href="#game-board" class="skip-link">Skip to game</a>
+    <main class="card">
         <div class="game-header">
             <div class="stat-box"><span id="flag-count">0</span></div>
             <button class="face-btn" id="face-btn" title="New Game">😊</button>
@@ -572,7 +591,7 @@
         <div class="keyboard-hints">
             <kbd>R</kbd> New game &nbsp; <kbd>D</kbd> Theme &nbsp; <kbd>1</kbd>-<kbd>4</kbd> Difficulty
         </div>
-    </div>
+    </main>
 
     <!-- Custom difficulty modal -->
     <div class="modal" id="custom-modal">
@@ -621,7 +640,6 @@
                 this.loadSound();
                 this.audioContext = null;
                 this.setupEventListeners();
-                this.faceBtn = document.getElementById('face-btn');
 
                 // Try to load saved game, otherwise init new
                 if (!this.loadGameState()) {
@@ -958,7 +976,7 @@
 
             renderBoard() {
                 const gameBoard = document.getElementById('game-board');
-                gameBoard.innerHTML = '';
+                gameBoard.replaceChildren();
                 const cellSize = window.innerWidth <= 360 ? 20 : window.innerWidth <= 500 ? 24 : 28;
                 gameBoard.style.gridTemplateRows = `repeat(${this.rows}, ${cellSize}px)`;
                 gameBoard.style.gridTemplateColumns = `repeat(${this.cols}, ${cellSize}px)`;
@@ -976,7 +994,7 @@
             }
 
             updateCellDisplay(cellElement, cellData) {
-                cellElement.innerHTML = '';
+                cellElement.replaceChildren();
                 cellElement.className = 'cell';
 
                 if (cellData.isRevealed) {
@@ -991,7 +1009,10 @@
                 } else if (cellData.isFlagged) {
                     cellElement.textContent = '🚩';
                 } else if (cellData.isQuestion) {
-                    cellElement.innerHTML = '<span class="question-icon">?</span>';
+                    const questionSpan = document.createElement('span');
+                    questionSpan.className = 'question-icon';
+                    questionSpan.textContent = '?';
+                    cellElement.appendChild(questionSpan);
                 }
             }
 
