@@ -9,6 +9,7 @@ Single-file HTML applications hosted at random.yprez.com. Each app is self-conta
 | `minesweeper.html` | Classic minesweeper game |
 | `meditation-timer.html` | Meditation timer with session tracking |
 | `hydration-tracker.html` | Daily water intake tracker |
+| `markdown-editor.html` | Markdown editor with live preview (uses CDN libs) |
 
 ## General guidelines
 
