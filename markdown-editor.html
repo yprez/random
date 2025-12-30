@@ -4,8 +4,51 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Markdown Editor</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+  <link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
   <style>
+    :root {
+      --bg-primary: #f5f5f5;
+      --bg-secondary: #ffffff;
+      --text-primary: #1a1a1a;
+      --text-secondary: #555555;
+      --text-muted: #888888;
+      --accent: #0066cc;
+      --accent-hover: #0052a3;
+      --border-color: #e0e0e0;
+      --editor-bg: #ffffff;
+      --editor-text: #24292e;
+      --code-bg: #f6f8fa;
+      --toolbar-bg: #fafafa;
+      --btn-bg: #e8e8e8;
+      --btn-hover: #d8d8d8;
+      --btn-active: #c8c8c8;
+      --status-bg: #fafafa;
+      --status-text: #666666;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --transition: all 0.2s ease;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --text-primary: #e8e8e8;
+      --text-secondary: #b0b0b0;
+      --text-muted: #808080;
+      --accent: #4da6ff;
+      --accent-hover: #6bb5ff;
+      --border-color: #2a2a4a;
+      --editor-bg: #1e1e2e;
+      --editor-text: #d4d4d4;
+      --code-bg: #2d2d3d;
+      --toolbar-bg: #16213e;
+      --btn-bg: #2a2a4a;
+      --btn-hover: #3a3a5a;
+      --btn-active: #4a4a6a;
+      --status-bg: #16213e;
+      --status-text: #a0a0a0;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -17,10 +60,70 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      background-color: #f5f5f5;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    .container {
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--border-color);
+      gap: 8px;
+      flex-wrap: wrap;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 4px;
+      background: var(--btn-bg);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .toolbar-btn:hover {
+      background: var(--btn-hover);
+      transform: translateY(-1px);
+    }
+
+    .toolbar-btn:active {
+      background: var(--btn-active);
+      transform: translateY(0);
+    }
+
+    .toolbar-btn .italic {
+      font-style: italic;
+    }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border-color);
+      margin: 0 4px;
+    }
+
+    .editor-container {
       display: flex;
       flex: 1;
       overflow: hidden;
@@ -29,65 +132,104 @@
     .panel {
       flex: 1;
       overflow-y: auto;
+      transition: background-color 0.3s ease;
+    }
+
+    .panel-divider {
+      width: 4px;
+      background: var(--border-color);
+      cursor: col-resize;
+      transition: background-color 0.2s ease;
+    }
+
+    .panel-divider:hover {
+      background: var(--accent);
     }
 
     #editor {
-      background-color: #fff;
+      background-color: var(--editor-bg);
+      color: var(--editor-text);
       border: none;
       resize: none;
       width: 100%;
       height: 100%;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 16px;
+      font-family: 'SF Mono', 'Fira Code', 'Courier New', Courier, monospace;
+      font-size: 15px;
       padding: 1rem;
       line-height: 1.6;
-      border-right: 1px solid #ddd;
+      outline: none;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    #editor::placeholder {
+      color: var(--text-muted);
     }
 
     #preview {
-      background-color: #fff;
+      background-color: var(--bg-secondary);
       padding: 1rem;
       line-height: 1.6;
+      transition: background-color 0.3s ease;
     }
 
     #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 {
-      margin-top: 1rem;
-      margin-bottom: 1rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: var(--text-primary);
+    }
+
+    #preview h1:first-child, #preview h2:first-child, #preview h3:first-child {
+      margin-top: 0;
     }
 
     #preview p {
       margin-bottom: 1rem;
+      color: var(--text-primary);
     }
 
     #preview blockquote {
-      border-left: 4px solid #ddd;
+      border-left: 4px solid var(--accent);
       padding-left: 1rem;
-      color: #666;
-      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      margin: 1rem 0;
+      background: var(--code-bg);
+      padding: 0.75rem 1rem;
+      border-radius: 0 4px 4px 0;
     }
 
     #preview pre {
+      background: var(--code-bg);
       padding: 0;
-      border-radius: 4px;
+      border-radius: 6px;
       overflow-x: auto;
       margin-bottom: 1rem;
+      border: 1px solid var(--border-color);
     }
 
     #preview code {
+      font-family: 'SF Mono', 'Fira Code', 'Courier New', Courier, monospace;
+      font-size: 0.9em;
+      background: var(--code-bg);
       padding: 0.2rem 0.4rem;
       border-radius: 3px;
-      font-family: 'Courier New', Courier, monospace;
     }
 
     #preview pre code {
+      display: block;
       padding: 1rem;
-      border-radius: 0;
-      background-color: transparent;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
     }
 
     #preview ul, #preview ol {
-      margin-left: 2rem;
+      margin-left: 1.5rem;
       margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    #preview li {
+      margin-bottom: 0.25rem;
     }
 
     #preview table {
@@ -97,44 +239,196 @@
     }
 
     #preview th, #preview td {
-      border: 1px solid #ddd;
-      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+    }
+
+    #preview th {
+      background: var(--code-bg);
+      font-weight: 600;
     }
 
     #preview img {
       max-width: 100%;
+      border-radius: 4px;
     }
 
     #preview a {
-      color: #0066cc;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    #preview a:hover {
+      text-decoration: underline;
     }
 
     #preview hr {
       border: none;
-      border-top: 1px solid #ddd;
-      margin: 1rem 0;
+      border-top: 1px solid var(--border-color);
+      margin: 1.5rem 0;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
+      background: var(--status-bg);
+      border-top: 1px solid var(--border-color);
+      font-size: 12px;
+      color: var(--status-text);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .save-indicator {
+      transition: opacity 0.3s ease;
+    }
+
+    .save-indicator.saving {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .editor-container {
+        flex-direction: column;
+      }
+
+      .panel {
+        height: 50%;
+      }
+
+      .panel-divider {
+        width: 100%;
+        height: 4px;
+        cursor: ns-resize;
+      }
+
+      #editor {
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .toolbar {
+        padding: 6px 8px;
+      }
+
+      .toolbar-btn {
+        min-width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+
+      .toolbar-divider {
+        display: none;
+      }
+
+      .status-bar {
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+
+      .status-group {
+        gap: 8px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .toolbar-group.formatting {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <header class="toolbar">
+    <div class="toolbar-group formatting">
+      <button class="toolbar-btn" data-action="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+      <button class="toolbar-btn" data-action="italic" title="Italic (Ctrl+I)"><span class="italic">I</span></button>
+      <button class="toolbar-btn" data-action="heading" title="Heading (Ctrl+H)">H</button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" data-action="link" title="Link (Ctrl+K)">#</button>
+      <button class="toolbar-btn" data-action="code" title="Inline Code (Ctrl+`)">&lt;&gt;</button>
+      <button class="toolbar-btn" data-action="codeblock" title="Code Block">```</button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" data-action="ul" title="Bullet List">-</button>
+      <button class="toolbar-btn" data-action="ol" title="Numbered List">1.</button>
+      <button class="toolbar-btn" data-action="quote" title="Quote (Ctrl+Q)">"</button>
+    </div>
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="theme-toggle" title="Toggle Theme (Ctrl+D)">-</button>
+    </div>
+  </header>
+
+  <main class="editor-container">
     <div class="panel">
       <textarea id="editor" placeholder="Write your markdown here..."></textarea>
     </div>
+    <div class="panel-divider"></div>
     <div class="panel">
       <div id="preview"></div>
     </div>
-  </div>
+  </main>
+
+  <footer class="status-bar">
+    <div class="status-group">
+      <span class="status-item" id="word-count">0 words</span>
+      <span class="status-item" id="char-count">0 chars</span>
+    </div>
+    <div class="status-group">
+      <span class="status-item save-indicator" id="save-status">Saved</span>
+    </div>
+  </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
   <script>
     const STORAGE_KEY = 'markdown-editor-content';
+    const THEME_KEY = 'markdown-editor-theme';
+
+    const formatActions = {
+      bold: { prefix: '**', suffix: '**', placeholder: 'bold text' },
+      italic: { prefix: '*', suffix: '*', placeholder: 'italic text' },
+      heading: { prefix: '## ', suffix: '', placeholder: 'Heading', lineStart: true },
+      link: { prefix: '[', suffix: '](url)', placeholder: 'link text' },
+      code: { prefix: '`', suffix: '`', placeholder: 'code' },
+      codeblock: { prefix: '```\n', suffix: '\n```', placeholder: 'code', multiline: true },
+      ul: { prefix: '- ', suffix: '', placeholder: 'list item', lineStart: true },
+      ol: { prefix: '1. ', suffix: '', placeholder: 'list item', lineStart: true },
+      quote: { prefix: '> ', suffix: '', placeholder: 'quote', lineStart: true }
+    };
 
     document.addEventListener('DOMContentLoaded', function() {
       const editor = document.getElementById('editor');
       const preview = document.getElementById('preview');
+      const themeToggle = document.getElementById('theme-toggle');
+      const saveStatus = document.getElementById('save-status');
+      const wordCount = document.getElementById('word-count');
+      const charCount = document.getElementById('char-count');
+      let saveTimeout = null;
 
+      // Configure marked
       marked.setOptions({
         highlight: function(code, lang) {
           if (lang && hljs.getLanguage(lang)) {
@@ -145,53 +439,162 @@
         langPrefix: 'hljs language-'
       });
 
+      // Theme management
+      function loadTheme() {
+        const saved = localStorage.getItem(THEME_KEY);
+        const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const theme = saved || system;
+        setTheme(theme);
+      }
+
+      function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem(THEME_KEY, theme);
+        themeToggle.textContent = theme === 'dark' ? '~' : '*';
+
+        // Swap highlight.js theme
+        const hljsLink = document.getElementById('hljs-theme');
+        hljsLink.href = theme === 'dark'
+          ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css'
+          : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css';
+      }
+
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      }
+
+      // Content management
       const defaultContent = `# Markdown Editor
 
 ## Features
 - Real-time preview
 - Code syntax highlighting
-- Auto-saves to browser storage
+- Dark/light theme toggle
+- Keyboard shortcuts
+- Auto-saves to browser
 
-## How to use
-1. Type markdown in the left panel
-2. See the rendered HTML in the right panel
+## Keyboard Shortcuts
+- **Ctrl+B** Bold
+- **Ctrl+I** Italic
+- **Ctrl+H** Heading
+- **Ctrl+K** Link
+- **Ctrl+Q** Quote
+- **Ctrl+D** Toggle theme
 
-### Example formatting
-
-**Bold text** and *italic text*
-
-> This is a blockquote
+## Example
 
 \`\`\`javascript
-function hello() {
-  console.log('Hello, world!');
+function greet(name) {
+  return \`Hello, \${name}!\`;
 }
 \`\`\`
 
-| Table | Header |
-|-------|--------|
-| Cell  | Cell   |
-
-[Link Example](https://example.com)
+> Try editing this content!
 `;
 
-      const saved = localStorage.getItem(STORAGE_KEY);
-      editor.value = saved !== null ? saved : defaultContent;
+      function loadContent() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        editor.value = saved !== null ? saved : defaultContent;
+      }
+
+      function saveContent() {
+        saveStatus.textContent = 'Saving...';
+        saveStatus.classList.add('saving');
+        localStorage.setItem(STORAGE_KEY, editor.value);
+
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+          saveStatus.textContent = 'Saved';
+          saveStatus.classList.remove('saving');
+        }, 400);
+      }
 
       function renderMarkdown() {
         preview.innerHTML = marked.parse(editor.value);
       }
 
-      function saveContent() {
-        localStorage.setItem(STORAGE_KEY, editor.value);
+      function updateCounts() {
+        const text = editor.value;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const chars = text.length;
+        wordCount.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+        charCount.textContent = `${chars} char${chars !== 1 ? 's' : ''}`;
       }
 
-      renderMarkdown();
+      // Formatting
+      function applyFormat(action) {
+        const format = formatActions[action];
+        if (!format) return;
 
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const text = editor.value;
+        const selected = text.substring(start, end) || format.placeholder;
+
+        let newText, newStart, newEnd;
+
+        if (format.lineStart) {
+          const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+          newText = text.substring(0, lineStart) + format.prefix + selected + format.suffix + text.substring(end);
+          newStart = lineStart + format.prefix.length;
+          newEnd = newStart + selected.length;
+        } else {
+          newText = text.substring(0, start) + format.prefix + selected + format.suffix + text.substring(end);
+          newStart = start + format.prefix.length;
+          newEnd = newStart + selected.length;
+        }
+
+        editor.value = newText;
+        editor.focus();
+        editor.setSelectionRange(newStart, newEnd);
+        editor.dispatchEvent(new Event('input'));
+      }
+
+      // Event listeners
       editor.addEventListener('input', function() {
         renderMarkdown();
         saveContent();
+        updateCounts();
       });
+
+      themeToggle.addEventListener('click', toggleTheme);
+
+      // Toolbar buttons
+      document.querySelectorAll('.toolbar-btn[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => applyFormat(btn.dataset.action));
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', function(e) {
+        if (!e.ctrlKey && !e.metaKey) return;
+
+        const shortcuts = {
+          'b': 'bold',
+          'i': 'italic',
+          'h': 'heading',
+          'k': 'link',
+          '`': 'code',
+          'q': 'quote',
+          'd': 'toggleTheme'
+        };
+
+        const action = shortcuts[e.key.toLowerCase()];
+        if (action) {
+          e.preventDefault();
+          if (action === 'toggleTheme') {
+            toggleTheme();
+          } else {
+            applyFormat(action);
+          }
+        }
+      });
+
+      // Initialize
+      loadTheme();
+      loadContent();
+      renderMarkdown();
+      updateCounts();
     });
   </script>
 </body>
