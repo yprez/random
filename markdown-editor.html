@@ -170,6 +170,12 @@
       padding: 1rem;
       line-height: 1.6;
       transition: background-color 0.3s ease;
+      outline: none;
+      min-height: 100%;
+    }
+
+    #preview:focus {
+      box-shadow: inset 0 0 0 2px var(--accent);
     }
 
     #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 {
@@ -387,7 +393,7 @@
     </div>
     <div class="panel-divider"></div>
     <div class="panel">
-      <div id="preview"></div>
+      <div id="preview" contenteditable="true"></div>
     </div>
   </main>
 
@@ -406,6 +412,125 @@
   <script>
     const STORAGE_KEY = 'markdown-editor-content';
     const THEME_KEY = 'markdown-editor-theme';
+
+    // HTML to Markdown converter
+    function htmlToMarkdown(element) {
+      let md = '';
+
+      function processNode(node, listType = null, listIndex = 0) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+        const tag = node.tagName.toLowerCase();
+        const children = Array.from(node.childNodes);
+        let content = children.map(c => processNode(c,
+          (tag === 'ul' || tag === 'ol') ? tag : listType,
+          (tag === 'li') ? listIndex : 0
+        )).join('');
+
+        switch (tag) {
+          case 'h1': return `# ${content.trim()}\n\n`;
+          case 'h2': return `## ${content.trim()}\n\n`;
+          case 'h3': return `### ${content.trim()}\n\n`;
+          case 'h4': return `#### ${content.trim()}\n\n`;
+          case 'h5': return `##### ${content.trim()}\n\n`;
+          case 'h6': return `###### ${content.trim()}\n\n`;
+          case 'p': return `${content.trim()}\n\n`;
+          case 'br': return '\n';
+          case 'strong':
+          case 'b': return `**${content}**`;
+          case 'em':
+          case 'i': return `*${content}*`;
+          case 'code':
+            if (node.parentElement?.tagName.toLowerCase() === 'pre') {
+              return content;
+            }
+            return `\`${content}\``;
+          case 'pre': {
+            const codeEl = node.querySelector('code');
+            const codeContent = codeEl ? codeEl.textContent : content;
+            const langClass = codeEl?.className.match(/language-(\w+)/);
+            const lang = langClass ? langClass[1] : '';
+            return `\`\`\`${lang}\n${codeContent.trim()}\n\`\`\`\n\n`;
+          }
+          case 'blockquote':
+            return content.trim().split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
+          case 'ul':
+          case 'ol':
+            return content + '\n';
+          case 'li': {
+            const prefix = listType === 'ol' ? `${listIndex + 1}. ` : '- ';
+            const siblings = node.parentElement ? Array.from(node.parentElement.children) : [];
+            const idx = siblings.indexOf(node);
+            return prefix + content.trim() + '\n';
+          }
+          case 'a': {
+            const href = node.getAttribute('href') || '';
+            return `[${content}](${href})`;
+          }
+          case 'img': {
+            const src = node.getAttribute('src') || '';
+            const alt = node.getAttribute('alt') || '';
+            return `![${alt}](${src})`;
+          }
+          case 'hr': return '---\n\n';
+          case 'table': return processTable(node);
+          case 'div':
+          case 'span':
+            return content;
+          default:
+            return content;
+        }
+      }
+
+      function processTable(table) {
+        const rows = Array.from(table.querySelectorAll('tr'));
+        if (rows.length === 0) return '';
+
+        let md = '';
+        rows.forEach((row, i) => {
+          const cells = Array.from(row.querySelectorAll('th, td'));
+          const cellContents = cells.map(c => c.textContent.trim());
+          md += '| ' + cellContents.join(' | ') + ' |\n';
+          if (i === 0) {
+            md += '| ' + cells.map(() => '---').join(' | ') + ' |\n';
+          }
+        });
+        return md + '\n';
+      }
+
+      // Process child nodes with proper list indexing
+      function processChildren(parent) {
+        let result = '';
+        const children = Array.from(parent.childNodes);
+
+        children.forEach((child, i) => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            const tag = child.tagName.toLowerCase();
+            if (tag === 'ul' || tag === 'ol') {
+              const items = Array.from(child.children);
+              items.forEach((li, idx) => {
+                const prefix = tag === 'ol' ? `${idx + 1}. ` : '- ';
+                const content = Array.from(li.childNodes).map(n => processNode(n)).join('');
+                result += prefix + content.trim() + '\n';
+              });
+              result += '\n';
+            } else {
+              result += processNode(child);
+            }
+          } else {
+            result += processNode(child);
+          }
+        });
+
+        return result;
+      }
+
+      return processChildren(element).trim();
+    }
 
     const formatActions = {
       bold: { prefix: '**', suffix: '**', placeholder: 'bold text' },
@@ -427,6 +552,7 @@
       const wordCount = document.getElementById('word-count');
       const charCount = document.getElementById('char-count');
       let saveTimeout = null;
+      let syncTimeout = null;
 
       // Configure marked
       marked.setOptions({
@@ -468,11 +594,14 @@
       const defaultContent = `# Markdown Editor
 
 ## Features
-- Real-time preview
+- **Editable preview** - edit in either panel
+- Real-time bidirectional sync
 - Code syntax highlighting
 - Dark/light theme toggle
 - Keyboard shortcuts
-- Auto-saves to browser
+
+## How to Use
+Edit the markdown on the left, or click the preview on the right to edit directly. Changes sync both ways.
 
 ## Keyboard Shortcuts
 - **Ctrl+B** Bold
@@ -482,15 +611,13 @@
 - **Ctrl+Q** Quote
 - **Ctrl+D** Toggle theme
 
-## Example
-
 \`\`\`javascript
 function greet(name) {
   return \`Hello, \${name}!\`;
 }
 \`\`\`
 
-> Try editing this content!
+> Try editing this content in either panel!
 `;
 
       function loadContent() {
@@ -556,6 +683,17 @@ function greet(name) {
         renderMarkdown();
         saveContent();
         updateCounts();
+      });
+
+      // Preview editing - debounced sync back to markdown
+      preview.addEventListener('input', function() {
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(() => {
+          const markdown = htmlToMarkdown(preview);
+          editor.value = markdown;
+          saveContent();
+          updateCounts();
+        }, 300);
       });
 
       themeToggle.addEventListener('click', toggleTheme);
