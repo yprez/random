@@ -333,6 +333,8 @@
 
       .panel {
         height: 50%;
+        min-height: 100px;
+        min-width: unset;
       }
 
       .panel-divider {
@@ -739,6 +741,83 @@ function greet(name) {
             applyFormat(action);
           }
         }
+      });
+
+      // Panel resizing
+      const divider = document.querySelector('.panel-divider');
+      const container = document.querySelector('.editor-container');
+      const leftPanel = container.children[0];
+      const rightPanel = container.children[2];
+      let isResizing = false;
+
+      function getIsVertical() {
+        return window.innerWidth <= 768;
+      }
+
+      function startResize(e) {
+        isResizing = true;
+        divider.classList.add('dragging');
+        const isVertical = getIsVertical();
+        document.body.classList.add(isVertical ? 'resizing-vertical' : 'resizing');
+        e.preventDefault();
+      }
+
+      function stopResize() {
+        if (!isResizing) return;
+        isResizing = false;
+        divider.classList.remove('dragging');
+        document.body.classList.remove('resizing', 'resizing-vertical');
+      }
+
+      function resize(e) {
+        if (!isResizing) return;
+
+        const isVertical = getIsVertical();
+        const containerRect = container.getBoundingClientRect();
+
+        // Get position from mouse or touch
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        if (isVertical) {
+          const offsetY = clientY - containerRect.top;
+          const totalHeight = containerRect.height;
+          const percentage = (offsetY / totalHeight) * 100;
+          const clampedPercentage = Math.max(10, Math.min(90, percentage));
+          leftPanel.style.height = `${clampedPercentage}%`;
+          rightPanel.style.height = `${100 - clampedPercentage}%`;
+          leftPanel.style.flex = 'none';
+          rightPanel.style.flex = 'none';
+        } else {
+          const offsetX = clientX - containerRect.left;
+          const totalWidth = containerRect.width;
+          const percentage = (offsetX / totalWidth) * 100;
+          const clampedPercentage = Math.max(10, Math.min(90, percentage));
+          leftPanel.style.width = `${clampedPercentage}%`;
+          rightPanel.style.width = `${100 - clampedPercentage}%`;
+          leftPanel.style.flex = 'none';
+          rightPanel.style.flex = 'none';
+        }
+      }
+
+      // Mouse events
+      divider.addEventListener('mousedown', startResize);
+      document.addEventListener('mousemove', resize);
+      document.addEventListener('mouseup', stopResize);
+
+      // Touch events for mobile
+      divider.addEventListener('touchstart', startResize, { passive: false });
+      document.addEventListener('touchmove', resize, { passive: false });
+      document.addEventListener('touchend', stopResize);
+
+      // Reset on window resize to prevent stuck layouts
+      window.addEventListener('resize', function() {
+        leftPanel.style.width = '';
+        leftPanel.style.height = '';
+        leftPanel.style.flex = '';
+        rightPanel.style.width = '';
+        rightPanel.style.height = '';
+        rightPanel.style.flex = '';
       });
 
       // Initialize
